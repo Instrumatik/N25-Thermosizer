@@ -4,6 +4,9 @@ on:
   workflow_dispatch:
   push:
     tags: ["v*"]
+  # En los PR que tocan el empaquetado se genera el instalador como artefacto de prueba.
+  pull_request:
+    paths: ["packaging/**", ".github/workflows/release.yml", "pyproject.toml"]
 
 permissions:
   contents: write
