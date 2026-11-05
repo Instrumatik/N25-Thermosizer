@@ -181,5 +181,12 @@ COATINGS: Final[tuple[tuple[str, str, str, str, float], ...]] = (
     # (id, nombre ES, nombre EN, uso, temperatura máxima °C)
     ("STELLITE6", "Recargue de estelita 6", "Stellite 6 hardfacing", "erosion", 800.0),
     ("WC_HVOF", "Carburo de tungsteno (HVOF)", "Tungsten carbide (HVOF)", "erosion", 500.0),
+    ("STELLITE1", "Recargue de estelita 1 (mayor dureza)", "Stellite 1 hardfacing (harder)",
+     "erosion", 800.0),
+    ("CRC_HVOF", "Carburo de cromo (HVOF)", "Chromium carbide (HVOF)", "erosion", 850.0),
     ("PTFE", "Revestimiento de PTFE", "PTFE lining", "corrosion", 200.0),
+    ("PFA", "Revestimiento de PFA", "PFA lining", "corrosion", 230.0),
+    ("PVDF", "Revestimiento de PVDF (Kynar)", "PVDF (Kynar) lining", "corrosion", 90.0),
+    ("TANTALUM", "Funda de tantalio", "Tantalum sheath", "corrosion", 250.0),
+    ("CERAMIC", "Funda cerámica (alúmina)", "Ceramic sheath (alumina)", "temperature", 1600.0),
 )

@@ -76,6 +76,8 @@ def sections(rep: TagReport) -> list[tuple[str, list[Row]]]:
                                   and c.basis.value == "velocity" else
                                   f.q(c.mass_flow, QuantityKind.MASS_FLOW)
                                   if c.basis.value == "mass_flow" else
+                                  f.q(c.standard_volume_flow, QuantityKind.STANDARD_VOLUME_FLOW)
+                                  if c.basis.value == "standard_volume_flow" else
                                   f.q(c.volume_flow, QuantityKind.VOLUME_FLOW))
         for c in proc.flow_cases)
     return [
@@ -229,8 +231,7 @@ def build_datasheet(rep: TagReport, path: Path) -> Path:
                             author="InstruMatik · ThermoWell Sizer")
     left = _kv_table(sections(rep), LEFT_W)
     inp = rep.evaluation.input
-    drawing = thermowell_drawing(inp.thermowell.geometry, inp.thermowell.connection.type, f,
-                                 RIGHT_W, 58 * mm)
+    drawing = thermowell_drawing(inp, f, RIGHT_W, 72 * mm)
     calc = _kv_table([(f.t("sec.calc"), calc_rows(rep))], RIGHT_W, start=100, label_ratio=0.55)
     status = rep.evaluation.status
     right = Table([[drawing], [Spacer(1, 2 * mm)], [calc], [Spacer(1, 3 * mm)],

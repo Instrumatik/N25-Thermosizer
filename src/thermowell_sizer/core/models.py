@@ -51,6 +51,8 @@ class FlowBasis(StrEnum):
 
     MASS_FLOW = "mass_flow"
     VOLUME_FLOW = "volume_flow"
+    STANDARD_VOLUME_FLOW = "standard_volume_flow"
+    """Caudal de gas en condiciones estándar (15 °C, 101,325 kPa)."""
     VELOCITY = "velocity"
 
 
@@ -159,6 +161,8 @@ class FlowCase(_Model):
     basis: FlowBasis
     mass_flow: NonNegative | None = Field(default=None, description="kg/s")
     volume_flow: NonNegative | None = Field(default=None, description="m³/s")
+    standard_volume_flow: NonNegative | None = Field(
+        default=None, description="Sm³/s a 15 °C y 101,325 kPa")
     velocity: NonNegative | None = Field(default=None, description="m/s")
 
     @model_validator(mode="after")
@@ -173,6 +177,8 @@ class FluidProperties(_Model):
 
     density: Positive = Field(description="ρ, kg/m³")
     dynamic_viscosity: Positive = Field(description="μ, Pa·s")
+    standard_density: Positive | None = Field(
+        default=None, description="ρ a 15 °C y 101,325 kPa, kg/m³ (para caudal estándar)")
     source: PropertySource
     source_note: str = Field(default="", description="p. ej. 'CoolProp 6.6, HEOS::Water'")
 
@@ -203,6 +209,9 @@ class ProcessConditions(_Model):
 
     @model_validator(mode="after")
     def _design_envelopes_operation(self) -> Self:
+        if self.properties.standard_density is None and any(
+                c.basis is FlowBasis.STANDARD_VOLUME_FLOW for c in self.flow_cases):
+            raise ValueError("El caudal estándar requiere la densidad en condiciones estándar")
         if self.design_pressure < self.operating_pressure:
             raise ValueError("La presión de diseño no puede ser menor que la de operación")
         if self.design_temperature < self.operating_temperature:
@@ -221,6 +230,8 @@ class PipeData(_Model):
     orientation: MountingOrientation = MountingOrientation.PERPENDICULAR
     insulation_thickness: NonNegative = Field(default=0.0, description="m")
     nozzle_length: NonNegative = Field(default=0.0, description="Longitud de tobera o niple, m")
+    nozzle_inner_diameter: Positive | None = Field(
+        default=None, description="Diámetro interno de la tobera, m (para verificar el paso)")
 
 
 # --- 4. Termopozo --------------------------------------------------------------------

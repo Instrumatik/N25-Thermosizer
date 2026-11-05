@@ -48,6 +48,7 @@ BASIS_KIND = {
     FlowBasis.VELOCITY: QuantityKind.VELOCITY,
     FlowBasis.MASS_FLOW: QuantityKind.MASS_FLOW,
     FlowBasis.VOLUME_FLOW: QuantityKind.VOLUME_FLOW,
+    FlowBasis.STANDARD_VOLUME_FLOW: QuantityKind.STANDARD_VOLUME_FLOW,
 }
 STEP_KEYS = ("step.identification", "step.process", "step.pipe", "step.thermowell",
              "step.sensor")
@@ -272,6 +273,8 @@ class TagEditor(QWidget):
         f.addRow(t("f.density"), self._q("density", QuantityKind.DENSITY, minimum=1e-9))
         f.addRow(t("f.viscosity"), self._q("viscosity", QuantityKind.DYNAMIC_VISCOSITY,
                                             minimum=1e-12))
+        f.addRow(t("f.std_density"), self._q("std_density", QuantityKind.DENSITY,
+                                              minimum=1e-9, optional=True))
         self.lbl_source = QLabel()
         self.lbl_source.setWordWrap(True)
         f.addRow(t("f.prop_source"), self.lbl_source)
@@ -325,6 +328,8 @@ class TagEditor(QWidget):
         f.addRow(t("f.orientation"), self.c_orient)
         f.addRow(t("f.insulation"), self._q("insulation", QuantityKind.LENGTH, minimum=0.0))
         f.addRow(t("f.nozzle"), self._q("nozzle", QuantityKind.LENGTH, minimum=0.0))
+        f.addRow(t("f.nozzle_id"), self._q("nozzle_id", QuantityKind.DIAMETER, minimum=1e-4,
+                                            optional=True))
         return _top(box)
 
     def _page_thermowell(self) -> QWidget:
@@ -465,6 +470,7 @@ class TagEditor(QWidget):
         auto = self.chk_auto.isChecked()
         self.quantities["density"].setEnabled(not auto)
         self.quantities["viscosity"].setEnabled(not auto)
+        self.quantities["std_density"].setEnabled(not auto)
         self.c_phase.setEnabled(not auto)
         profile = ShankProfile(self.c_profile.value())
         stepped = profile is ShankProfile.STEPPED
@@ -548,6 +554,7 @@ class TagEditor(QWidget):
         self.c_orient.set_value(pipe.orientation)
         q["insulation"].set_value(pipe.insulation_thickness)
         q["nozzle"].set_value(pipe.nozzle_length)
+        q["nozzle_id"].set_value(pipe.nozzle_inner_diameter)
         self.c_profile.set_value(g.profile)
         self.c_conn.set_value(tw.connection.type)
         self.e_conn_size.setText(tw.connection.size)
@@ -575,6 +582,7 @@ class TagEditor(QWidget):
         props = inp.process.properties
         self.quantities["density"].set_value(props.density)
         self.quantities["viscosity"].set_value(props.dynamic_viscosity)
+        self.quantities["std_density"].set_value(props.standard_density)
         source = {PropertySource.COOLPROP: "CoolProp", PropertySource.LIBRARY: "Biblioteca",
                   PropertySource.USER: "Usuario"}[props.source]
         self.lbl_source.setText(props.source_note or source)
@@ -589,6 +597,17 @@ class TagEditor(QWidget):
 
         return parse_number(text, STATE.language)
 
+    def _standard_density(self) -> float | None:
+        """ρ estándar: de la biblioteca si las propiedades son automáticas."""
+        value = self.quantities["std_density"].value()
+        if self.chk_auto.isChecked() or value is None:
+            from thermowell_sizer.properties.fluids import standard_density
+
+            fluid = self.c_fluid.currentData()
+            auto = standard_density(self.library, fluid) if fluid else None
+            return auto if auto is not None else value
+        return value
+
     def raw(self) -> dict[str, Any]:
         """Datos del formulario como diccionario compatible con :class:`CalcInput`."""
         q = self.quantities
@@ -599,6 +618,7 @@ class TagEditor(QWidget):
         a = q["g_A"].value()
         props: dict[str, Any] = {
             "density": q["density"].value(), "dynamic_viscosity": q["viscosity"].value(),
+            "standard_density": self._standard_density(),
             "source": (base.process.properties.source.value if base and self.chk_auto.isChecked()
                        else PropertySource.USER.value),
             "source_note": base.process.properties.source_note if base else "",
@@ -633,6 +653,7 @@ class TagEditor(QWidget):
                 "orientation": self.c_orient.value().value,
                 "insulation_thickness": q["insulation"].value() or 0.0,
                 "nozzle_length": q["nozzle"].value() or 0.0,
+                "nozzle_inner_diameter": q["nozzle_id"].value(),
             },
             "thermowell": {
                 "geometry": {

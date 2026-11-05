@@ -152,7 +152,7 @@ class MainWindow(QMainWindow):
         right = QSplitter(Qt.Orientation.Vertical)
         right.addWidget(self.preview)
         right.addWidget(self.results)
-        right.setSizes([220, 480])
+        right.setSizes([340, 420])
         split = QSplitter()
         split.addWidget(self.editor)
         split.addWidget(right)
@@ -445,8 +445,7 @@ class MainWindow(QMainWindow):
     def _update_preview(self, inp: CalcInput | None) -> None:
         if inp is None:
             return
-        self.preview.set_data(inp.thermowell.geometry, inp.thermowell.connection.type,
-                              inp.pipe.inner_diameter)
+        self.preview.set_input(inp)
 
     # --- Edición ------------------------------------------------------------------------
     def _editor_settled(self) -> None:

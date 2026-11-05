@@ -127,9 +127,7 @@ def build_memo(rep: TagReport, path: Path) -> Path:
                                  f" — {escape(inp.identification.service)}"
                                  if inp.identification.service else ""), "center", raw=True),
                              Spacer(1, 6 * mm),
-                             thermowell_drawing(inp.thermowell.geometry,
-                                                inp.thermowell.connection.type, f, BODY_W,
-                                                70 * mm),
+                             thermowell_drawing(inp, f, BODY_W, 80 * mm),
                              Spacer(1, 6 * mm)]
     status = ev.status
     rgb = STATUS_RGB.get(status, (0.5, 0.5, 0.5)) if status else (0.5, 0.5, 0.5)

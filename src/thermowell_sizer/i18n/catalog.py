@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Final
 
+from thermowell_sizer.i18n.catalog_advice import ADVICE_EN, ADVICE_ES
 from thermowell_sizer.i18n.catalog_data import DATA_EN, DATA_ES
 from thermowell_sizer.i18n.catalog_engine import ENGINE_EN, ENGINE_ES
 
@@ -60,3 +61,5 @@ CATALOG["es"].update(ENGINE_ES)
 CATALOG["en"].update(ENGINE_EN)
 CATALOG["es"].update(DATA_ES)
 CATALOG["en"].update(DATA_EN)
+CATALOG["es"].update(ADVICE_ES)
+CATALOG["en"].update(ADVICE_EN)

@@ -163,16 +163,37 @@ def _not_applicable(criterion_id: str, scope: str, reference: str, key: str) -> 
     )
 
 
-def resolve_velocity(case: FlowCase, density: float, pipe_inner_diameter: float) -> float:
-    """Velocidad del fluido para un caso de flujo, m/s (párr. 7-3)."""
+def resolve_velocity(case: FlowCase, density: float, pipe_inner_diameter: float,
+                     standard_density: float | None = None) -> float:
+    """Velocidad del fluido para un caso de flujo, m/s (párr. 7-3).
+
+    Para caudal estándar se pasa a caudal másico con la densidad estándar:
+    ṁ = Q_std·ρ_std.
+
+    Raises:
+        ValueError: caudal estándar sin densidad estándar.
+    """
     if case.basis is FlowBasis.VELOCITY:
         assert case.velocity is not None
         return case.velocity
     if case.basis is FlowBasis.MASS_FLOW:
         assert case.mass_flow is not None
         return flow.velocity_from_mass_flow(case.mass_flow, density, pipe_inner_diameter)
+    if case.basis is FlowBasis.STANDARD_VOLUME_FLOW:
+        assert case.standard_volume_flow is not None
+        if standard_density is None:
+            raise ValueError("Caudal estándar sin densidad en condiciones estándar")
+        return flow.velocity_from_mass_flow(case.standard_volume_flow * standard_density,
+                                            density, pipe_inner_diameter)
     assert case.volume_flow is not None
     return flow.velocity_from_volume_flow(case.volume_flow, pipe_inner_diameter)
+
+
+def case_velocity(inp: CalcInput, case: FlowCase) -> float:
+    """Velocidad de un caso de flujo con las propiedades del fluido de la entrada, m/s."""
+    props = inp.process.properties
+    return resolve_velocity(case, props.density, inp.pipe.inner_diameter,
+                            props.standard_density)
 
 
 def _geometry_cases(inp: CalcInput, options: EngineOptions) -> list[_Geometry]:
@@ -462,7 +483,8 @@ def _evaluate_case(
     # --- 7-3 / 7-5: velocidad, Reynolds y Strouhal -------------------------------------
     v = rec(
         "V",
-        resolve_velocity(flow_case, rho, inp.pipe.inner_diameter),
+        resolve_velocity(flow_case, rho, inp.pipe.inner_diameter,
+                         inp.process.properties.standard_density),
         Q.VELOCITY,
         "para. 7-3",
         r"V = \dot m/(\rho A_p)\ \text{o}\ V = Q/A_p",

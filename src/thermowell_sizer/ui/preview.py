@@ -1,63 +1,80 @@
-"""Vista previa 2D del termopozo con cotas, actualizada en tiempo real."""
+"""Vista previa 2D del termopozo: corte acotado al estilo de catálogo, en tiempo real."""
 
 from __future__ import annotations
 
-from PySide6.QtCore import QPointF, QRectF, Qt
-from PySide6.QtGui import QColor, QPainter, QPainterPath, QPaintEvent, QPen, QPolygonF
+from collections.abc import Sequence
+
+from PySide6.QtCore import QPointF, Qt
+from PySide6.QtGui import QColor, QPainter, QPaintEvent, QPen, QPolygonF
 from PySide6.QtWidgets import QSizePolicy, QWidget
 
-from thermowell_sizer.core.models import ConnectionType, ShankProfile, ThermowellGeometry
+from thermowell_sizer.core.models import CalcInput
+from thermowell_sizer.core.sketch import (
+    SKETCH_LABELS_EN,
+    SKETCH_LABELS_ES,
+    Painter,
+    SketchText,
+    build_sketch,
+    render,
+)
 from thermowell_sizer.core.units import QuantityKind
-from thermowell_sizer.ui.text import t
+from thermowell_sizer.i18n import Language
+from thermowell_sizer.ui.state import STATE
 from thermowell_sizer.ui.widgets import fmt_quantity
 
-MARGIN = 36.0
-FLANGE_THICKNESS_RATIO = 0.18
-"""Espesor dibujado de la brida respecto de L (solo ilustrativo)."""
-FLANGE_HEIGHT_RATIO = 3.2
-"""Diámetro dibujado de la brida respecto de A."""
-HEAD_LENGTH_RATIO = 0.12
+ROW_H = 15.0
 
 
-def _outline(g: ThermowellGeometry, x0: float, s: float, cy: float) -> QPolygonF:
-    """Contorno exterior (vista lateral) desde el soporte x0 hacia la punta."""
-    half_a = g.A * s / 2
-    half_b = g.B * s / 2
-    tip_x = x0 + g.L * s
-    pts: list[QPointF] = [QPointF(x0, cy - half_a)]
-    if g.profile is ShankProfile.STEPPED:
-        step_x = tip_x - g.Ls * s
-        pts += [QPointF(step_x, cy - half_a), QPointF(step_x, cy - half_b)]
-    pts.append(QPointF(tip_x - half_b * 0.3, cy - half_b))
-    pts.append(QPointF(tip_x, cy))
-    pts.append(QPointF(tip_x - half_b * 0.3, cy + half_b))
-    if g.profile is ShankProfile.STEPPED:
-        step_x = tip_x - g.Ls * s
-        pts += [QPointF(step_x, cy + half_b), QPointF(step_x, cy + half_a)]
-    pts.append(QPointF(x0, cy + half_a))
-    return QPolygonF(pts)
+class _QtPainter(Painter):
+    def __init__(self, p: QPainter, colors: dict[str, QColor]) -> None:
+        self.p = p
+        self.colors = colors
+
+    def line(self, x1: float, y1: float, x2: float, y2: float, *, width: float = 0.8,
+             dash: bool = False, color: str = "ink") -> None:
+        pen = QPen(self.colors[color], width * 1.2,
+                   Qt.PenStyle.DashLine if dash else Qt.PenStyle.SolidLine)
+        self.p.setPen(pen)
+        self.p.drawLine(QPointF(x1, y1), QPointF(x2, y2))
+
+    def polygon(self, pts: Sequence[tuple[float, float]], *, fill: str,
+                stroke: bool = True) -> None:
+        self.p.setPen(QPen(self.colors["ink"], 1.1) if stroke else Qt.PenStyle.NoPen)
+        self.p.setBrush(self.colors[fill])
+        self.p.drawPolygon(QPolygonF([QPointF(x, y) for x, y in pts]))
+
+    def text(self, x: float, y: float, text: str, *, anchor: str = "start") -> None:
+        w = self.text_width(text)
+        dx = {"start": 0.0, "middle": -w / 2, "end": -w}[anchor]
+        self.p.setPen(self.colors["ink"])
+        self.p.drawText(QPointF(x + dx, y), text)
+
+    def text_width(self, text: str) -> float:
+        return float(self.p.fontMetrics().horizontalAdvance(text))
+
+
+def sketch_text() -> SketchText:
+    """Formatos y etiquetas del plano según el idioma y las unidades vigentes."""
+    return SketchText(
+        length=lambda v: fmt_quantity(v, QuantityKind.LENGTH),
+        diameter=lambda v: fmt_quantity(v, QuantityKind.DIAMETER),
+        labels=SKETCH_LABELS_ES if STATE.language is Language.ES else SKETCH_LABELS_EN,
+    )
 
 
 class ThermowellPreview(QWidget):
-    """Dibujo esquemático: tubería, conexión, vástago, agujero y cotas principales."""
+    """Corte longitudinal acotado del termopozo (mismo dibujo que la hoja de datos)."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.geometry_: ThermowellGeometry | None = None
-        self.connection = ConnectionType.FLANGED
-        self.pipe_id: float | None = None
-        self.setMinimumSize(320, 200)
+        self.input: CalcInput | None = None
+        self.setMinimumSize(320, 220)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.setAccessibleName("Vista previa del termopozo")
 
-    def set_data(
-        self, geometry: ThermowellGeometry | None, connection: ConnectionType,
-        pipe_id: float | None,
-    ) -> None:
+    def set_input(self, inp: CalcInput | None) -> None:
         """Actualiza el dibujo."""
-        self.geometry_ = geometry
-        self.connection = connection
-        self.pipe_id = pipe_id
+        self.input = inp
         self.update()
 
     def paintEvent(self, event: QPaintEvent) -> None:  # noqa: N802 - API de Qt
@@ -66,85 +83,22 @@ class ThermowellPreview(QWidget):
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         pal = self.palette()
         p.fillRect(self.rect(), pal.base())
-        g = self.geometry_
-        if g is None:
+        if self.input is None:
             p.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, "—")
             p.end()
             return
-        fg = pal.text().color()
-        head = g.L * HEAD_LENGTH_RATIO + g.T_lag
-        total = g.L + head
-        avail_w = self.width() - 2 * MARGIN
-        avail_h = self.height() - 2 * MARGIN - 30
-        s = min(avail_w / total, avail_h / (g.A * FLANGE_HEIGHT_RATIO))
-        cy = MARGIN + avail_h / 2 + 4
-        x0 = MARGIN + head * s
-
-        # Pared de tubería (si cabe en el dibujo): el termopozo entra desde la izquierda.
-        if self.pipe_id:
-            wall_pen = QPen(QColor("#5b8bd0"), 1, Qt.PenStyle.DashLine)
-            p.setPen(wall_pen)
-            p.drawLine(QPointF(x0 + g.L0 * s, MARGIN - 10), QPointF(x0 + g.L0 * s,
-                                                                    self.height() - MARGIN))
-            far = x0 + self.pipe_id * s
-            if far < self.width() - 4:
-                p.drawLine(QPointF(far, MARGIN - 10), QPointF(far, self.height() - MARGIN))
-            p.setPen(QColor("#5b8bd0"))
-            arrow_y = MARGIN - 4
-            p.drawText(QPointF(x0 + g.L0 * s + 6, arrow_y), t("preview.flow"))
-
-        metal = QColor("#b8bec7") if pal.base().color().lightness() > 128 else QColor("#596270")
-        p.setPen(QPen(fg, 1.4))
-        p.setBrush(metal)
-        # Conexión
-        if self.connection in (ConnectionType.FLANGED, ConnectionType.VAN_STONE):
-            fh = g.A * FLANGE_HEIGHT_RATIO * s
-            ft = max(g.L * FLANGE_THICKNESS_RATIO * s * 0.4, 6.0)
-            p.drawRect(QRectF(x0 - ft, cy - fh / 2, ft, fh))
-            p.drawRect(QRectF(MARGIN, cy - g.A * s * 0.6, x0 - ft - MARGIN, g.A * s * 1.2))
-        elif self.connection is ConnectionType.THREADED:
-            th = g.A * 1.25 * s
-            p.drawRect(QRectF(MARGIN, cy - th / 2, x0 - MARGIN, th))
-            p.setPen(QPen(fg, 0.6))
-            step = 4.0
-            x = x0 - (x0 - MARGIN) * 0.5
-            while x < x0:
-                p.drawLine(QPointF(x, cy - th / 2), QPointF(x + step / 2, cy - th / 2 - 3))
-                x += step
-            p.setPen(QPen(fg, 1.4))
-        else:
-            p.drawRect(QRectF(MARGIN, cy - g.A * s * 0.75, x0 - MARGIN, g.A * s * 1.5))
-        # Vástago
-        p.drawPolygon(_outline(g, x0, s, cy))
-        # Agujero
-        p.setBrush(pal.base())
-        p.setPen(QPen(fg, 0.8, Qt.PenStyle.DashLine))
-        bore_end = x0 + (g.L - g.t) * s
-        p.drawRect(QRectF(MARGIN, cy - g.d * s / 2, bore_end - MARGIN, g.d * s))
-
-        # Cotas
-        p.setPen(QPen(fg, 0.8))
-        y_dim = cy + g.A * FLANGE_HEIGHT_RATIO * s / 2 + 16
-        self._dim(p, x0, x0 + g.L * s, y_dim, "L = " + fmt_quantity(g.L, QuantityKind.LENGTH))
-        tip_x = x0 + g.L * s
-        p.drawText(QPointF(x0 + 4, cy - g.A * s / 2 - 6),
-                   "A = " + fmt_quantity(g.A, QuantityKind.DIAMETER))
-        p.drawText(QPointF(tip_x - 90, cy + g.B * s / 2 + 14),
-                   "B = " + fmt_quantity(g.B, QuantityKind.DIAMETER))
-        p.drawText(QPointF(x0 + g.L * s * 0.3, cy + g.A * s / 2 + 14),
-                   "d = " + fmt_quantity(g.d, QuantityKind.DIAMETER))
+        dark = pal.base().color().lightness() < 128
+        colors = {
+            "ink": pal.text().color(),
+            "hatch": QColor("#9aa3b0") if dark else QColor("#5a6270"),
+            "pipe": QColor("#5b8bd0"),
+            "metal": QColor("#3c434d") if dark else QColor("#e3e7ec"),
+            "plain": QColor("#596270") if dark else QColor("#c4cad3"),
+            "bore": pal.base().color(),
+        }
+        font = p.font()
+        font.setPointSizeF(max(font.pointSizeF() - 1, 7.0))
+        p.setFont(font)
+        render(build_sketch(self.input, sketch_text()), _QtPainter(p, colors),
+               self.width(), self.height(), row_h=ROW_H, margin=8.0)
         p.end()
-
-    @staticmethod
-    def _dim(p: QPainter, x1: float, x2: float, y: float, label: str) -> None:
-        p.drawLine(QPointF(x1, y - 6), QPointF(x1, y + 6))
-        p.drawLine(QPointF(x2, y - 6), QPointF(x2, y + 6))
-        p.drawLine(QPointF(x1, y), QPointF(x2, y))
-        arrow = QPainterPath()
-        for xa, sign in ((x1, 1), (x2, -1)):
-            arrow.moveTo(xa, y)
-            arrow.lineTo(xa + 6 * sign, y - 3)
-            arrow.moveTo(xa, y)
-            arrow.lineTo(xa + 6 * sign, y + 3)
-        p.drawPath(arrow)
-        p.drawText(QRectF(x1, y + 2, x2 - x1, 18), Qt.AlignmentFlag.AlignHCenter, label)

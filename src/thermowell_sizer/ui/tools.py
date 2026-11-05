@@ -34,6 +34,7 @@ CATEGORY_NAMES = {
     "temperature": ("Temperatura", "Temperature"), "pressure": ("Presión", "Pressure"),
     "length": ("Longitud", "Length"), "mass_flow": ("Caudal másico", "Mass flow"),
     "volume_flow": ("Caudal volumétrico", "Volume flow"), "density": ("Densidad", "Density"),
+    "standard_volume_flow": ("Caudal de gas estándar", "Standard gas flow"),
     "dynamic_viscosity": ("Viscosidad dinámica", "Dynamic viscosity"),
     "kinematic_viscosity": ("Viscosidad cinemática", "Kinematic viscosity"),
     "velocity": ("Velocidad", "Velocity"), "stress": ("Esfuerzo", "Stress"),

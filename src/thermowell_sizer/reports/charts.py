@@ -15,7 +15,7 @@ from thermowell_sizer.core.analysis.sensitivity import (
     max_allowable_velocity,
     velocity_sweep,
 )
-from thermowell_sizer.core.ptc19_3.verify import resolve_velocity
+from thermowell_sizer.core.ptc19_3.verify import case_velocity
 from thermowell_sizer.core.units import QuantityKind, unit_for
 from thermowell_sizer.reports.common import Fmt
 from thermowell_sizer.services import Evaluation
@@ -29,8 +29,7 @@ def sensitivity_png(ev: Evaluation, fmt: Fmt) -> bytes | None:
     if ev.material is None or ev.result is None:
         return None
     inp = ev.input
-    rho = inp.process.properties.density
-    v_cases = [resolve_velocity(c, rho, inp.pipe.inner_diameter) for c in inp.process.flow_cases]
+    v_cases = [case_velocity(inp, c) for c in inp.process.flow_cases]
     v_top = max(max(v_cases), 1.0) * 2
     vmax = max_allowable_velocity(inp, ev.material, ev.options, samples=120)
     if vmax is not None:

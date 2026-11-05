@@ -94,7 +94,8 @@ def test_glossary_standards_compat(lib: Library) -> None:
     assert len(lib.glossary()) > 30
     assert any(s[0] == "ASME-PTC-19.3-TW" for s in lib.standards())
     assert lib.compatibility("N04400")["hf"] == "A"
-    assert {c[0] for c in lib.coatings()} == {"STELLITE6", "WC_HVOF", "PTFE"}
+    assert {"STELLITE6", "STELLITE1", "WC_HVOF", "PTFE", "PVDF", "TANTALUM",
+            "CERAMIC"} <= {c[0] for c in lib.coatings()}
 
 
 @pytest.mark.parametrize(("query", "ref"), [
@@ -183,7 +184,7 @@ def test_selection_temperature_and_agents(lib: Library) -> None:
 def test_selection_erosive(lib: Library) -> None:
     ev = recommend_materials(lib, ServiceConditions(600 + C, erosive=True))
     ss = next(e for e in ev if e.material.id == "SS316")
-    assert ss.coatings == ("STELLITE6",)
+    assert set(ss.coatings) == {"STELLITE6", "STELLITE1", "CRC_HVOF"}
     assert "sel.fatigue_not_covered" in next(e for e in ev if e.material.id == "TA").reasons
 
 

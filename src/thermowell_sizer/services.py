@@ -7,9 +7,11 @@ from __future__ import annotations
 
 import csv
 import io
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from thermowell_sizer.core.advisories import Advisory, advise
 from thermowell_sizer.core.models import (
     CalcInput,
     CheckStatus,
@@ -33,19 +35,27 @@ from thermowell_sizer.core.models import (
     Thermowell,
     ThermowellGeometry,
 )
-from thermowell_sizer.core.ptc19_3.verify import VerificationResult, resolve_velocity, verify
+from thermowell_sizer.core.ptc19_3.verify import VerificationResult, case_velocity, verify
 from thermowell_sizer.core.tools.heat import (
     THERMAL_BY_FAMILY,
     film_coefficient,
     immersion_error,
     time_constant,
 )
-from thermowell_sizer.core.units import BAR_PA, INCH_M, KELVIN_OFFSET, STANDARD_ATMOSPHERE_PA
+from thermowell_sizer.core.units import (
+    BAR_PA,
+    INCH_M,
+    KELVIN_OFFSET,
+    STANDARD_ATMOSPHERE_PA,
+    QuantityKind,
+)
 from thermowell_sizer.data.database import Library
+from thermowell_sizer.i18n import Language, tr
 from thermowell_sizer.project import ProjectSettings, TagRecord
 from thermowell_sizer.properties.fluids import (
     FluidPropertyError,
     fluid_state,
+    standard_density,
     thermal_properties,
 )
 
@@ -82,6 +92,7 @@ class Evaluation:
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     thermal: ThermalEstimate | None = None
+    advisories: list[Advisory] = field(default_factory=list)
 
     @property
     def status(self) -> CheckStatus | None:
@@ -131,7 +142,9 @@ def with_fluid_properties(inp: CalcInput, library: Library) -> tuple[CalcInput, 
     proc = inp.process
     state = fluid_state(library, proc.fluid_id, proc.operating_temperature,
                         proc.operating_pressure)
-    new_proc = proc.model_copy(update={"properties": state.properties, "phase": state.phase})
+    props = state.properties.model_copy(
+        update={"standard_density": standard_density(library, proc.fluid_id)})
+    new_proc = proc.model_copy(update={"properties": props, "phase": state.phase})
     return inp.model_copy(update={"process": new_proc}), state.phase
 
 
@@ -179,7 +192,25 @@ def evaluate(record: TagRecord, library: Library, settings: ProjectSettings) -> 
     ev.warnings.extend(notes)
     ev.result = verify(inp, ev.material, ev.options)
     ev.thermal = thermal_estimate(inp, library)
+    coating = inp.thermowell.material.coating
+    coating_max = next((c[4] for c in library.coatings() if c[0] == coating), None)
+    ev.advisories = advise(inp, coating_max_temperature=coating_max)
     return ev
+
+
+def render_advisory(adv: Advisory, lang: Language,
+                    qfmt: Callable[[float, QuantityKind], str],
+                    nfmt: Callable[[float], str]) -> str:
+    """Texto del aviso con sus valores en las unidades y el idioma pedidos."""
+    params: dict[str, object] = {}
+    for key, value in adv.params.items():
+        if key in adv.kinds and isinstance(value, float):
+            params[key] = qfmt(value, adv.kinds[key])
+        elif isinstance(value, float):
+            params[key] = nfmt(value)
+        else:
+            params[key] = value
+    return tr(adv.key, lang, **params)
 
 
 def thermal_estimate(inp: CalcInput, library: Library) -> ThermalEstimate | None:
@@ -194,7 +225,7 @@ def thermal_estimate(inp: CalcInput, library: Library) -> ThermalEstimate | None
     k_f, cp_f, generic = thermal_properties(library, proc.fluid_id, proc.operating_temperature,
                                             proc.operating_pressure, proc.phase)
     rho, mu = proc.properties.density, proc.properties.dynamic_viscosity
-    v = max(resolve_velocity(c, rho, inp.pipe.inner_diameter) for c in proc.flow_cases)
+    v = max(case_velocity(inp, c) for c in proc.flow_cases)
     d_mean = (g.A + g.B) / 2
     h = film_coefficient(rho, v, d_mean, mu, k_f, cp_f)
     exposed = max(g.L - g.L0, 1e-6)

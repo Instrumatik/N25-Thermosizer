@@ -15,7 +15,7 @@ from thermowell_sizer.core.analysis.sensitivity import (
     max_allowable_velocity,
     velocity_sweep,
 )
-from thermowell_sizer.core.ptc19_3.verify import resolve_velocity
+from thermowell_sizer.core.ptc19_3.verify import case_velocity
 from thermowell_sizer.core.units import QuantityKind, unit_for
 from thermowell_sizer.services import Evaluation
 from thermowell_sizer.ui.state import STATE
@@ -85,8 +85,7 @@ class SensitivityChart(QWidget):
             self.canvas.draw_idle()
             return
         inp = ev.input
-        velocities_now = [resolve_velocity(c, inp.process.properties.density,
-                                           inp.pipe.inner_diameter)
+        velocities_now = [case_velocity(inp, c)
                           for c in inp.process.flow_cases]
         v_case = max(velocities_now)
         mode = self.mode.currentData()

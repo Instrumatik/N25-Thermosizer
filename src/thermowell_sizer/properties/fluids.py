@@ -91,6 +91,21 @@ def fluid_state(
     return FluidState(props, Phase(info.default_phase))
 
 
+STANDARD_TEMPERATURE = 288.15
+"""Condición estándar de referencia para caudales de gas: 15 °C (ISO 13443)."""
+STANDARD_PRESSURE = 101_325.0
+"""101,325 kPa absolutos (ISO 13443)."""
+
+
+def standard_density(library: Library, fluid_id: str) -> float | None:
+    """Densidad a 15 °C y 101,325 kPa, kg/m³, o ``None`` si no hay datos."""
+    try:
+        return fluid_state(library, fluid_id, STANDARD_TEMPERATURE,
+                           STANDARD_PRESSURE).properties.density
+    except FluidPropertyError:
+        return None
+
+
 def gas_density(
     temperature: float, pressure: float, molar_mass: float, compressibility: float = 1.0
 ) -> float:

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import html
+
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QBrush, QColor
 from PySide6.QtWidgets import (
@@ -18,12 +20,13 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from thermowell_sizer.core.advisories import AdvisoryLevel
 from thermowell_sizer.core.analysis.optimize import Alternative
 from thermowell_sizer.core.models import CheckResult, CheckStatus
 from thermowell_sizer.core.units import QuantityKind
 from thermowell_sizer.i18n import tr
 from thermowell_sizer.reports.common import CRITERION_NAMES, SCOPE_NAMES
-from thermowell_sizer.services import Evaluation
+from thermowell_sizer.services import Evaluation, render_advisory
 from thermowell_sizer.ui.state import STATE
 from thermowell_sizer.ui.text import t
 from thermowell_sizer.ui.widgets import STATUS_COLORS, StatusLight, fmt, fmt_quantity
@@ -99,6 +102,7 @@ class ResultsPanel(QWidget):
         self.cases = QTableWidget(0, 0)
         self.cases.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.notes = QTextBrowser()
+        self.advice = QTextBrowser()
         self.trace = QTextBrowser()
         self.alt_list = QListWidget()
         self.btn_alt = QPushButton(t("act.optimize"))
@@ -120,6 +124,7 @@ class ResultsPanel(QWidget):
         self.tabs = QTabWidget()
         self.tabs.addTab(self.table, t("panel.results"))
         self.tabs.addTab(self.cases, t("res.summary"))
+        self.tabs.addTab(self.advice, t("res.advice"))
         self.tabs.addTab(self.notes, t("res.notes"))
         self.tabs.addTab(self.trace, t("res.trace"))
         self.tabs.addTab(alt, t("res.alternatives"))
@@ -139,6 +144,7 @@ class ResultsPanel(QWidget):
         self.table.setRowCount(0)
         self.cases.setRowCount(0)
         self.notes.clear()
+        self.advice.clear()
         self.trace.clear()
         self.set_alternatives([])
 
@@ -174,7 +180,30 @@ class ResultsPanel(QWidget):
                          + (" " + t("res.thermal_generic") if th.generic_fluid_data else ""))
         notes += [f"{i.field}: {tr(i.message_key, STATE.language)}" for i in res.issues]
         self.notes.setPlainText("\n\n".join(notes) if notes else "—")
+        self._fill_advice(ev)
         self._fill_trace(ev)
+
+    def _fill_advice(self, ev: Evaluation) -> None:
+        """Advertencias y recomendaciones complementarias, con su fuente."""
+        icons = {AdvisoryLevel.CRITICAL: ("⛔", STATUS_COLORS[CheckStatus.FAIL]),
+                 AdvisoryLevel.WARNING: ("⚠", STATUS_COLORS[CheckStatus.WARNING]),
+                 AdvisoryLevel.INFO: ("ℹ", "#1f6fb2")}
+
+        def qfmt(value: float, kind: QuantityKind) -> str:
+            return fmt_quantity(value, kind,
+                                gauge=kind is QuantityKind.PRESSURE and STATE.gauge)
+
+        items = []
+        for adv in ev.advisories:
+            icon, color = icons[adv.level]
+            text = html.escape(render_advisory(adv, STATE.language, qfmt, fmt))
+            items.append(f"<p><span style='color:{color}'><b>{icon} "
+                         f"{t('adv.level.' + adv.level.value)}</b></span> {text}"
+                         f"<br/><small><i>{html.escape(adv.reference)}</i></small></p>")
+        self.advice.setHtml("".join(items) or "—")
+        worst = sum(1 for a in ev.advisories if a.level is not AdvisoryLevel.INFO)
+        idx = self.tabs.indexOf(self.advice)
+        self.tabs.setTabText(idx, t("res.advice") + (f" ({worst})" if worst else ""))
 
     def _fill_checks(self, checks: list[CheckResult]) -> None:
         heads = [t("res.criterion"), t("res.case"), t("res.value"), t("res.limit"),
