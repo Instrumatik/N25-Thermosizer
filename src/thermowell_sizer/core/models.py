@@ -373,6 +373,12 @@ class MaterialProperties(_Model):
         default=None, description="S a la temperatura de diseño (presión), Pa; None = S"
     )
     fatigue_class: FatigueClass
+    fatigue_table_covered: bool = Field(
+        default=True, description="False si el material no figura en la tabla 6-12.3-1"
+    )
+    fatigue_limit_override: Positive | None = Field(
+        default=None, description="S_f obtenido por ensayo, Pa; reemplaza al de la tabla"
+    )
     max_temperature: AbsTemperature | None = None
     stress_corrosion_susceptible: bool = False
     source_note: str = ""

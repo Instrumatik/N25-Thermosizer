@@ -305,6 +305,19 @@ def _general_checks(
         notes.append("note.high_temperature_fe")
     if opts.supplier_rating:
         notes.append("note.supplier_rating")
+    if not material.fatigue_table_covered and material.fatigue_limit_override is None:
+        checks.append(
+            CheckResult(
+                criterion_id="fatigue_data",
+                flow_case="",
+                status=CheckStatus.WARNING,
+                value=0.0,
+                limit=0.0,
+                margin_pct=0.0,
+                reference=k.ref("para. 6-12.3"),
+                message_key="check.fatigue_data_missing",
+            )
+        )
 
 
 def _pressure_checks(
@@ -635,7 +648,9 @@ def _evaluate_case(
 
     # --- Fatiga: límite admisible --------------------------------------------------------
     state = opts.metal_state or _DEFAULT_METAL_STATE[conn]
-    sf = fatigue.fatigue_endurance_limit(material.fatigue_class, state)
+    sf = material.fatigue_limit_override or fatigue.fatigue_endurance_limit(
+        material.fatigue_class, state
+    )
     ft = rec(
         "F_T",
         fatigue.temperature_factor(e, material.elastic_modulus_reference),
