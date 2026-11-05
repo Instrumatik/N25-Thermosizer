@@ -113,6 +113,26 @@ class SensorType(StrEnum):
     BIMETALLIC = "bimetallic"
 
 
+class MetalState(StrEnum):
+    """Estado del metal donde ocurre el esfuerzo máximo (tabla 6-12.3-1, notas 1 a 3)."""
+
+    AS_WELDED = "as_welded"
+    """Soldado sin mecanizar, o roscado."""
+    WELDED_MACHINED = "welded_machined"
+    """Soldado y luego mecanizado, con penetración total inspeccionada."""
+    NO_WELDS = "no_welds"
+    """Superficie mecanizada sin soldaduras."""
+
+
+class StrouhalMethod(StrEnum):
+    """Cálculo del número de Strouhal."""
+
+    CORRELATION = "correlation"
+    """Correlación en función de Re (eq. 6-4-2)."""
+    SIMPLIFIED = "simplified"
+    """Valor conservador 0,22 (eq. 6-4-4)."""
+
+
 class FatigueClass(StrEnum):
     """Clase de material para el límite de fatiga (ASME PTC 19.3 TW-2016, tabla 6-12.3-1)."""
 
@@ -333,3 +353,57 @@ class CheckResult(_Model):
     margin_pct: float = Field(description="(límite − valor)/límite × 100; negativo = no cumple")
     reference: str
     message_key: str
+
+
+# --- Datos resueltos del material y opciones del motor ----------------------------------
+class MaterialProperties(_Model):
+    """Propiedades del material ya evaluadas a las temperaturas del cálculo (párr. 7-4).
+
+    La capa de datos (Fase 3) las obtiene de la biblioteca interpolando en temperatura;
+    el motor solo recibe números.
+    """
+
+    material_id: str
+    name: str = ""
+    density: Positive = Field(description="ρ_m a temperatura ambiente, kg/m³")
+    elastic_modulus: Positive = Field(description="E a la temperatura de operación, Pa")
+    elastic_modulus_reference: Positive = Field(description="E_ref para F_T (párr. 6-12.3), Pa")
+    allowable_stress: Positive = Field(description="S a la temperatura de operación, Pa")
+    allowable_stress_design: Positive | None = Field(
+        default=None, description="S a la temperatura de diseño (presión), Pa; None = S"
+    )
+    fatigue_class: FatigueClass
+    max_temperature: AbsTemperature | None = None
+    stress_corrosion_susceptible: bool = False
+    source_note: str = ""
+
+
+class EngineOptions(_Model):
+    """Opciones del cálculo con sus valores por defecto conservadores."""
+
+    barometric_pressure: Positive = Field(default=101_325.0, description="Pa absolutos")
+    damping: Positive = Field(default=0.0005, description="ζ (párr. 6-8.2)")
+    strouhal_method: StrouhalMethod = StrouhalMethod.CORRELATION
+    environmental_factor: float = Field(default=1.0, gt=0.0, le=1.0, description="F_E")
+    metal_state: MetalState | None = Field(
+        default=None, description="None = deducir de la conexión"
+    )
+    support_stiffness: Positive | None = Field(
+        default=None, description="K_M conocido, N·m/rad; None = usar eq. 6-6-5 o 6-7-1"
+    )
+    flange_rating: Positive | None = Field(
+        default=None, description="P_f de ASME B16.5 a la temperatura de diseño, Pa manométricos"
+    )
+    amber_margin_pct: NonNegative = 10.0
+    allow_inline_passage: bool = Field(
+        default=False, description="Aplicar el párr. 6-8.5 (solo gases, arranque y parada)"
+    )
+    finite_life_fatigue_limit: Positive | None = Field(
+        default=None, description="Límite de fatiga para los ciclos de arranque/parada, Pa"
+    )
+    corrosion_cases: bool = Field(
+        default=True, description="Evaluar los casos con sobreespesor de corrosión (6-2)"
+    )
+    supplier_rating: bool = Field(
+        default=False, description="Rating de proveedor: H_a,f = 1 (párr. 9-2)"
+    )

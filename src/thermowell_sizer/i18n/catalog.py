@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Final
 
+from thermowell_sizer.i18n.catalog_engine import ENGINE_EN, ENGINE_ES
+
 CATALOG: Final[dict[str, dict[str, str]]] = {
     "es": {
         "validation.out_of_range": (
@@ -52,3 +54,6 @@ CATALOG: Final[dict[str, dict[str, str]]] = {
         ),
     },
 }
+
+CATALOG["es"].update(ENGINE_ES)
+CATALOG["en"].update(ENGINE_EN)

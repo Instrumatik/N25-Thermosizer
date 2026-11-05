@@ -9,8 +9,9 @@ memoria de cálculo trazable.
 
 ## Estado
 
-Fase 1 de 7: arquitectura, modelo de datos y estructura de carpetas.
-Ver [`docs/arquitectura.md`](docs/arquitectura.md).
+Fase 2 de 7: motor de cálculo ASME PTC 19.3 TW-2016 validado contra los ejemplos
+de la norma. Ver [`docs/arquitectura.md`](docs/arquitectura.md) y
+[`docs/validacion-motor.md`](docs/validacion-motor.md).
 
 ## Desarrollo
 
