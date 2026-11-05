@@ -177,7 +177,7 @@ Cobertura exigida al motor: ≥ 90 % (hoy 99 %), verificada en la CI. Resultados
 | 3 | Materiales (17 + recubrimientos), fluidos, bridas B16.5, glosario | hecho ([datos](datos-biblioteca.md)) |
 | 4 | Interfaz: menú completo, asistente de 5 pasos, cálculo rápido, vista 2D | hecho ([interfaz](interfaz.md)) |
 | 5 | Calculadoras y convertidores | hecho ([calculadoras](calculadoras.md)) |
-| 6 | Hoja de datos y memoria de cálculo (PDF, Excel) | |
+| 6 | Hoja de datos y memoria de cálculo (PDF, Excel) | hecho ([reportes](reportes.md)) |
 | 7 | Instalador Windows, licencias, manual y ejemplos | |
 
 ## 10. Riesgos y puntos abiertos

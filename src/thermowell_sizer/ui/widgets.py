@@ -24,6 +24,8 @@ STATUS_COLORS: dict[CheckStatus | None, str] = {
     None: "#8a8f98",
 }
 SIGNIFICANT_DIGITS = 5
+SCI_LOW = 1e-3
+SCI_HIGH = 1e9
 
 
 def smart_decimals(value: float) -> int:
@@ -43,6 +45,9 @@ def fmt(value: float, decimals: int | None = None) -> str:
         return "∞" if value > 0 else "—"
     if decimals is not None:
         return format_number(value, decimals, STATE.language)
+    if value and not SCI_LOW <= abs(value) < SCI_HIGH:
+        mant = f"{value:.4e}"
+        return mant.replace(".", ",") if STATE.language.value == "es" else mant
     text = format_number(value, smart_decimals(value), STATE.language)
     sep = "," if STATE.language.value == "es" else "."
     if sep in text:

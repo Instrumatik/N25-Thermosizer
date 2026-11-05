@@ -194,3 +194,13 @@ def test_thermal_estimate_shown(window: MainWindow) -> None:
     ev = window.calculate()
     assert ev is not None and ev.thermal is not None
     assert "τ" in window.results.lbl_summary.text()
+
+
+def test_report_generation(window: MainWindow, tmp_path: Path) -> None:
+    from thermowell_sizer.ui import report_actions
+
+    window.calculate()
+    for kind, ext in (("datasheet", ".pdf"), ("excel", ".xlsx"), ("bom", ".xlsx"),
+                      ("project_report", ".pdf")):
+        out = report_actions.generate(window, kind, tmp_path / f"{kind}{ext}")
+        assert out.stat().st_size > 1000

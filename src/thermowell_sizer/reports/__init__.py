@@ -1,1 +1,1 @@
-"""Hoja de datos y memoria de cálculo (Fase 6): PDF (ReportLab), Excel y Word."""
+"""Reportes: hoja de datos y memoria de cálculo (PDF), Excel, Word y resumen de proyecto."""
