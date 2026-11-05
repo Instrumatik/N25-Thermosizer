@@ -148,6 +148,8 @@ TEXT: Final[dict[str, tuple[str, str]]] = {
     "qty": ("Cant.", "Qty"), "item": ("Ítem", "Item"),
     "generated": ("Generado con ThermoWell Sizer", "Generated with ThermoWell Sizer"),
     "units_note": ("Unidades", "Units"),
+    "licensed_to": ("Licenciado a", "Licensed to"),
+    "evaluation": ("VERSIÓN DE EVALUACIÓN", "EVALUATION VERSION"),
 }
 
 
@@ -159,6 +161,8 @@ class Fmt:
     units: UnitSystem = UnitSystem.SI
     barometric: float = 101_325.0
     gauge: bool = True
+    licensee: str | None = None
+    """Titular de la licencia; ``None`` = versión de evaluación (marca de agua)."""
 
     def t(self, key: str, **params: object) -> str:
         """Texto del reporte (o del catálogo general)."""
@@ -224,8 +228,10 @@ class Fmt:
         return DISCLAIMER_ES if self.lang is Language.ES else DISCLAIMER_EN
 
     def footer(self) -> str:
-        """Pie con versión y fecha."""
-        return f"{self.t('generated')} {__version__} · {date.today().isoformat()}"
+        """Pie con versión, fecha y titular de la licencia."""
+        lic = (f"{self.t('licensed_to')} {self.licensee}" if self.licensee
+               else self.t("evaluation"))
+        return f"{self.t('generated')} {__version__} · {date.today().isoformat()} · {lic}"
 
 
 @dataclass(slots=True)
@@ -246,11 +252,11 @@ class TagReport:
 
 
 def make_fmt(project: Project, lang: Language | None = None,
-             units: UnitSystem | None = None) -> Fmt:
+             units: UnitSystem | None = None, licensee: str | None = None) -> Fmt:
     """Formato según las preferencias del proyecto (o las indicadas)."""
     s = project.settings
     return Fmt(lang or s.language, units or s.unit_system, s.barometric_pressure,
-               s.pressure_as_gauge)
+               s.pressure_as_gauge, licensee)
 
 
 def tag_report(project: Project, index: int, library: Library, fmt: Fmt | None = None,

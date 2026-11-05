@@ -994,13 +994,8 @@ class MainWindow(QMainWindow):
                                 t("dlg.shortcuts_text").replace(" · ", "\n"))
 
     def show_license(self) -> None:
-        """Estado de la licencia (Fase 7)."""
-        try:
-            license_ui = importlib.import_module("thermowell_sizer.ui.license_ui")
-        except ImportError:
-            QMessageBox.information(self, "ThermoWell Sizer", t("dlg.feature_later"))
-            return
-        license_ui.show(self)
+        """Estado de la licencia e instalación de una nueva."""
+        importlib.import_module("thermowell_sizer.ui.license_ui").show(self)
 
     # --- Cierre -------------------------------------------------------------------------
     def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802 - API de Qt

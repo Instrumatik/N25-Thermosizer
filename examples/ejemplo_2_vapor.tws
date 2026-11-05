@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "info": {
+    "name": "Ejemplo 2 · Vapor de alta presión",
+    "client": "Ejemplo",
+    "plant": "",
+    "document_number": "EJEMPLO_2_VAPOR",
+    "revisions": []
+  },
+  "settings": {
+    "unit_system": "SI",
+    "language": "es",
+    "barometric_pressure": 101325.0,
+    "pressure_as_gauge": true
+  },
+  "tags": [
+    {
+      "input": {
+        "identification": {
+          "tag": "TW-201",
+          "service": "Colector de vapor de alta",
+          "line_or_equipment": "",
+          "pid": "P&ID-002",
+          "location": ""
+        },
+        "process": {
+          "fluid_id": "water",
+          "phase": "liquid",
+          "operating_pressure": 4101325.0,
+          "design_pressure": 4601325.0,
+          "operating_temperature": 673.15,
+          "design_temperature": 698.15,
+          "flow_cases": [
+            {
+              "label": "normal",
+              "basis": "velocity",
+              "mass_flow": null,
+              "volume_flow": null,
+              "velocity": 25.0
+            },
+            {
+              "label": "max",
+              "basis": "velocity",
+              "mass_flow": null,
+              "volume_flow": null,
+              "velocity": 35.0
+            }
+          ],
+          "properties": {
+            "density": 972.0,
+            "dynamic_viscosity": 0.00035,
+            "source": "user",
+            "source_note": ""
+          },
+          "corrosion": {
+            "h2s_partial_pressure": 0.0,
+            "chlorides_ppm": 0.0,
+            "ph": null,
+            "co2_partial_pressure": 0.0,
+            "solids_or_erosive": false,
+            "nace_service": false
+          }
+        },
+        "pipe": {
+          "nominal_size": "8",
+          "schedule": "80",
+          "inner_diameter": 0.19368,
+          "material_id": "",
+          "orientation": "perpendicular",
+          "insulation_thickness": 0.0,
+          "nozzle_length": 0.0
+        },
+        "thermowell": {
+          "geometry": {
+            "profile": "tapered",
+            "construction": "bar_stock",
+            "L": 0.125,
+            "A": 0.03175,
+            "B": 0.0254,
+            "d": 0.006604,
+            "t": 0.00635,
+            "b": 0.003175,
+            "Ls": 0.0,
+            "bs": 0.0,
+            "U": 0.125,
+            "T_lag": 0.0,
+            "L0": 0.0,
+            "surface_finish_ra": 8.1e-7,
+            "corrosion_allowance": 0.0
+          },
+          "material": {
+            "material_id": "F22",
+            "coating": ""
+          },
+          "connection": {
+            "type": "flanged",
+            "size": "1-1/2",
+            "rating_class": 600,
+            "face": "RF"
+          }
+        },
+        "sensor": {
+          "type": "rtd_pt100",
+          "sheath_diameter": 0.006,
+          "mass": null,
+          "density": null,
+          "spring_loaded": true
+        }
+      },
+      "options": {
+        "barometric_pressure": 101325.0,
+        "damping": 0.0005,
+        "strouhal_method": "correlation",
+        "environmental_factor": 1.0,
+        "metal_state": null,
+        "support_stiffness": null,
+        "flange_rating": null,
+        "amber_margin_pct": 10.0,
+        "allow_inline_passage": false,
+        "finite_life_fatigue_limit": null,
+        "corrosion_cases": true,
+        "supplier_rating": false
+      },
+      "auto_properties": true,
+      "last_status": null,
+      "notes": ""
+    }
+  ]
+}

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "thermowell-sizer"
-version = "0.1.0.dev0"
+version = "1.0.0"
 description = "Dimensionamiento y verificación de termopozos según ASME PTC 19.3 TW-2016"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -18,7 +18,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-gui = ["PySide6>=6.7", "matplotlib>=3.8"]
+gui = ["PySide6>=6.7", "matplotlib>=3.8", "cryptography>=42"]
 reports = ["reportlab>=4.2", "openpyxl>=3.1", "python-docx>=1.1"]
 licensing = ["cryptography>=42"]
 dev = [

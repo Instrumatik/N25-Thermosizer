@@ -19,3 +19,7 @@ user_data/
 # Las normas son documentos con licencia: nunca se versionan
 *.pdf
 !docs/**/*_propio.pdf
+
+# Claves y licencias: nunca se versionan
+*.pem
+licencia*.txt
