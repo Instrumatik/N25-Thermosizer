@@ -170,3 +170,27 @@ def test_language_rebuild(app: QApplication, library: Library, tmp_path: Path) -
 def test_ui_text_pairs_complete() -> None:
     for key, pair in UI.items():
         assert len(pair) == 2 and all(pair), key
+
+
+def test_tool_windows(app: QApplication, library: Library) -> None:
+    from thermowell_sizer.ui import tools
+
+    conv = tools.open_tool("converter", library)
+    assert isinstance(conv, tools.ConverterWindow)
+    conv.category.setCurrentIndex(conv.category.findData("temperature"))
+    conv.value.setText("100")
+    assert conv.table.rowCount() == 4
+    calcs = tools.open_tool("calculators", library)
+    assert isinstance(calcs, tools.CalculatorsWindow)
+    for i in range(calcs.tabs.count()):
+        tab = calcs.tabs.widget(i)
+        tab.run()  # type: ignore[attr-defined]
+        assert "⚠" not in tab.result.text(), calcs.tabs.tabText(i)  # type: ignore[attr-defined]
+    conv.close()
+    calcs.close()
+
+
+def test_thermal_estimate_shown(window: MainWindow) -> None:
+    ev = window.calculate()
+    assert ev is not None and ev.thermal is not None
+    assert "τ" in window.results.lbl_summary.text()

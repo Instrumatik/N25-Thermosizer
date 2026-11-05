@@ -97,3 +97,32 @@ def gas_density(
     """Densidad de un gas real ρ = P·M / (Z·R·T) (P en Pa abs, M en kg/mol)."""
     gas_constant = 8.314_462_618  # J/(mol·K), CODATA 2018 exacto
     return pressure * molar_mass / (compressibility * gas_constant * temperature)
+
+
+GENERIC_THERMAL = {"liquid": (0.6, 4180.0), "gas": (0.03, 1100.0), "steam": (0.05, 2100.0),
+                   "two_phase": (0.6, 4180.0)}
+"""(k W/m·K, cp J/kg·K) genéricos cuando no hay modelo del fluido."""
+
+
+def thermal_properties(
+    library: Library, fluid_id: str, temperature: float, pressure: float, phase: Phase
+) -> tuple[float, float, bool]:
+    """Conductividad y calor específico del fluido.
+
+    Returns:
+        (k, cp, es_genérico): el último indica que se usaron valores típicos de la fase.
+    """
+    try:
+        name = library.fluid(fluid_id).coolprop_name
+    except KeyError:
+        name = None
+    if name and COOLPROP_VERSION is not None:
+        try:
+            k = float(PropsSI("L", "T", temperature, "P", pressure, name))
+            cp = float(PropsSI("C", "T", temperature, "P", pressure, name))
+            if k > 0 and cp > 0:
+                return k, cp, False
+        except ValueError:
+            pass
+    k, cp = GENERIC_THERMAL[phase.value]
+    return k, cp, True

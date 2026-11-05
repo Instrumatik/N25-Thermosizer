@@ -174,11 +174,20 @@ class ResultsPanel(QWidget):
             parts.append(f"f_n,c = {fmt_quantity(fn, QuantityKind.FREQUENCY)}")
         if ev.material is not None:
             parts.append(ev.material.name)
+        th = ev.thermal
+        if th is not None:
+            parts.append(t("res.thermal", tau=fmt(th.tau, 0), t90=fmt(th.t90, 0),
+                           err=fmt_quantity(abs(th.immersion_error),
+                                            QuantityKind.TEMPERATURE_DIFFERENCE)))
         self.lbl_summary.setText(" · ".join(parts))
         self._fill_checks(res.checks)
         self._fill_cases(ev)
         notes = [tr(n, STATE.language) for n in res.notes]
         notes += [t(w) for w in ev.warnings]
+        if th is not None:
+            notes.append(t("res.thermal_note", h=fmt(th.h, 0),
+                           lmin=fmt_quantity(th.min_immersion or 0.0, QuantityKind.LENGTH))
+                         + (" " + t("res.thermal_generic") if th.generic_fluid_data else ""))
         notes += [f"{i.field}: {tr(i.message_key, STATE.language)}" for i in res.issues]
         self.notes.setPlainText("\n\n".join(notes) if notes else "—")
         self._fill_trace(ev)
