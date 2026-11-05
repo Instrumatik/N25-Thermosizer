@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+import os
 import sys
+import tempfile
 from pathlib import Path
 
 from PySide6.QtCore import QSettings, QStandardPaths
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QMessageBox
 
-from thermowell_sizer import DISCLAIMER_EN, DISCLAIMER_ES
+from thermowell_sizer import DISCLAIMER_EN, DISCLAIMER_ES, licensing
 from thermowell_sizer.core.units import UnitSystem
 from thermowell_sizer.data.database import Library
 from thermowell_sizer.i18n import Language
@@ -73,6 +75,21 @@ def first_run_disclaimer(settings: QSettings) -> None:
     settings.setValue("ui/disclaimer_ok", True)
 
 
+SMOKE_TEST_ENV = "TWS_SMOKE_TEST"
+"""Si está definida, el programa calcula, genera un PDF y termina (prueba del ejecutable)."""
+
+
+def smoke_test(window: MainWindow) -> int:
+    """Calcula el tag por defecto y genera la hoja de datos; 0 si todo funcionó."""
+    from thermowell_sizer.ui import report_actions
+
+    window.calculate()
+    with tempfile.TemporaryDirectory() as tmp:
+        out = report_actions.generate(window, "datasheet", Path(tmp) / "humo.pdf")
+        ok = out.stat().st_size > 0 and bool(window.evaluations)
+    return 0 if ok else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     """Arranca la interfaz. Acepta opcionalmente la ruta de un proyecto ``.tws``."""
     args = sys.argv if argv is None else argv
@@ -83,7 +100,12 @@ def main(argv: list[str] | None = None) -> int:
     settings = QSettings()
     load_preferences(settings)
     apply_theme(app, STATE.dark)
-    library = Library(data_dir() / LIBRARY_FILE)
+    STATE.data_folder = data_dir()
+    lic = licensing.load(STATE.data_folder)
+    STATE.licensee = lic.holder if lic else None
+    library = Library(STATE.data_folder / LIBRARY_FILE)
+    if os.environ.get(SMOKE_TEST_ENV):
+        return smoke_test(Application(app, library, settings).window)
     first_run_disclaimer(settings)
     shell = Application(app, library, settings)
     if len(args) > 1 and Path(args[1]).suffix == ".tws":

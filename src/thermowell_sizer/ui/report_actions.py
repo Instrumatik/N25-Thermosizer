@@ -30,7 +30,8 @@ SPECS: dict[str, tuple[str, str, bool]] = {
 def current_fmt(window: MainWindow) -> Fmt:
     """Formato con el idioma y las unidades de la interfaz."""
     s = window.project.settings
-    return Fmt(STATE.language, STATE.units, s.barometric_pressure, s.pressure_as_gauge)
+    return Fmt(STATE.language, STATE.units, s.barometric_pressure, s.pressure_as_gauge,
+               STATE.licensee)
 
 
 def generate(window: MainWindow, kind: str, path: Path) -> Path:

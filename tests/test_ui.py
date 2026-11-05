@@ -204,3 +204,27 @@ def test_report_generation(window: MainWindow, tmp_path: Path) -> None:
                       ("project_report", ".pdf")):
         out = report_actions.generate(window, kind, tmp_path / f"{kind}{ext}")
         assert out.stat().st_size > 1000
+
+
+def test_license_dialog(window: MainWindow, tmp_path: Path,
+                        monkeypatch: pytest.MonkeyPatch) -> None:
+    from thermowell_sizer.ui import license_ui, report_actions
+    from thermowell_sizer.ui.state import STATE
+
+    monkeypatch.setattr(STATE, "data_folder", tmp_path)
+    dlg = license_ui.LicenseDialog(window)
+    assert STATE.licensee is None
+    assert "evaluación" in dlg.status.text() or "Evaluation" in dlg.status.text()
+    assert len(dlg.fingerprint.text()) == 16
+    dlg.code.setPlainText("TWS1.no.valida")
+    assert dlg.install(quiet=True) is None
+    assert report_actions.current_fmt(window).licensee is None
+    monkeypatch.setattr(STATE, "licensee", "Planta Norte")
+    assert "Planta Norte" in report_actions.current_fmt(window).footer()
+    dlg.deleteLater()
+
+
+def test_smoke_test_mode(window: MainWindow) -> None:
+    from thermowell_sizer.ui.app import smoke_test
+
+    assert smoke_test(window) == 0

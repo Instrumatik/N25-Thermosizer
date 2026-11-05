@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "info": {
+    "name": "Ejemplo 1 · Agua de refrigeración",
+    "client": "Ejemplo",
+    "plant": "",
+    "document_number": "EJEMPLO_1_AGUA",
+    "revisions": []
+  },
+  "settings": {
+    "unit_system": "SI",
+    "language": "es",
+    "barometric_pressure": 101325.0,
+    "pressure_as_gauge": true
+  },
+  "tags": [
+    {
+      "input": {
+        "identification": {
+          "tag": "TW-101",
+          "service": "Agua de refrigeración",
+          "line_or_equipment": "6\"-CW-101",
+          "pid": "P&ID-001",
+          "location": ""
+        },
+        "process": {
+          "fluid_id": "water",
+          "phase": "liquid",
+          "operating_pressure": 1101325.0,
+          "design_pressure": 1601325.0,
+          "operating_temperature": 353.15,
+          "design_temperature": 393.15,
+          "flow_cases": [
+            {
+              "label": "normal",
+              "basis": "velocity",
+              "mass_flow": null,
+              "volume_flow": null,
+              "velocity": 2.0
+            }
+          ],
+          "properties": {
+            "density": 972.0,
+            "dynamic_viscosity": 0.00035,
+            "source": "user",
+            "source_note": ""
+          },
+          "corrosion": {
+            "h2s_partial_pressure": 0.0,
+            "chlorides_ppm": 0.0,
+            "ph": null,
+            "co2_partial_pressure": 0.0,
+            "solids_or_erosive": false,
+            "nace_service": false
+          }
+        },
+        "pipe": {
+          "nominal_size": "6",
+          "schedule": "40",
+          "inner_diameter": 0.15405,
+          "material_id": "",
+          "orientation": "perpendicular",
+          "insulation_thickness": 0.0,
+          "nozzle_length": 0.0
+        },
+        "thermowell": {
+          "geometry": {
+            "profile": "tapered",
+            "construction": "bar_stock",
+            "L": 0.15,
+            "A": 0.026987499999999998,
+            "B": 0.019049999999999997,
+            "d": 0.006604,
+            "t": 0.00635,
+            "b": 0.003175,
+            "Ls": 0.0,
+            "bs": 0.0,
+            "U": 0.15,
+            "T_lag": 0.0,
+            "L0": 0.0,
+            "surface_finish_ra": 8.1e-7,
+            "corrosion_allowance": 0.0
+          },
+          "material": {
+            "material_id": "SS316",
+            "coating": ""
+          },
+          "connection": {
+            "type": "flanged",
+            "size": "1-1/2",
+            "rating_class": 300,
+            "face": "RF"
+          }
+        },
+        "sensor": {
+          "type": "rtd_pt100",
+          "sheath_diameter": 0.006,
+          "mass": null,
+          "density": null,
+          "spring_loaded": true
+        }
+      },
+      "options": {
+        "barometric_pressure": 101325.0,
+        "damping": 0.0005,
+        "strouhal_method": "correlation",
+        "environmental_factor": 1.0,
+        "metal_state": null,
+        "support_stiffness": null,
+        "flange_rating": null,
+        "amber_margin_pct": 10.0,
+        "allow_inline_passage": false,
+        "finite_life_fatigue_limit": null,
+        "corrosion_cases": true,
+        "supplier_rating": false
+      },
+      "auto_properties": true,
+      "last_status": null,
+      "notes": ""
+    }
+  ]
+}

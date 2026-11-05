@@ -109,8 +109,23 @@ def title_block(c: Canvas, project: Project, fmt: Fmt, title: str, subtitle: str
         c.drawRightString(x0 + w - 1.5 * mm, y + 1.4 * mm, v[:28])
 
 
+WATERMARK_GRAY: Final = 0.45
+WATERMARK_ALPHA: Final = 0.16
+WATERMARK_SIZE: Final = 46
+WATERMARK_ANGLE: Final = 52
+
+
 def footer(c: Canvas, fmt: Fmt) -> None:
-    """Pie: aviso de responsabilidad y versión del programa."""
+    """Pie: aviso de responsabilidad y versión; marca de agua si no hay licencia."""
+    if fmt.licensee is None:
+        c.saveState()
+        c.setFillGray(WATERMARK_GRAY)
+        c.setFillAlpha(WATERMARK_ALPHA)
+        c.setFont(FONT_BOLD, WATERMARK_SIZE)
+        c.translate(PAGE_W / 2, PAGE_H / 2)
+        c.rotate(WATERMARK_ANGLE)
+        c.drawCentredString(0, 0, fmt.t("evaluation"))
+        c.restoreState()
     c.setFont(FONT_BOLD, 6.6)
     c.setFillColor(colors.HexColor("#8a4b00"))
     text = fmt.disclaimer

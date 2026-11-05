@@ -162,9 +162,11 @@ Cobertura exigida al motor: ≥ 90 % (hoy 99 %), verificada en la CI. Resultados
   verifica la firma sin Internet. La licencia contiene titular, edición, vencimiento y
   una huella del equipo. Usted genera las claves con una herramienta aparte que nunca
   se distribuye.
-- **Compilación**: Python es fácil de descompilar, así que el instalador comercial se
-  compilará con **Nuitka** (código C nativo) en lugar de PyInstaller, empaquetado con
-  Inno Setup. Esto no hace la copia imposible, pero sí mucho más costosa.
+- **Compilación**: la versión 1.0 se empaqueta con **PyInstaller** + Inno Setup
+  (`packaging/`, flujo `release.yml`), que es lo más simple de mantener. Python es fácil
+  de descompilar; antes de vender a terceros conviene compilar con **Nuitka** (código C
+  nativo), que reutiliza el mismo instalador. Ninguna opción hace imposible la copia,
+  solo más costosa. Ver [licencias.md](licencias.md).
 - **Repositorio**: hoy es público. Para un producto comercial conviene pasarlo a
   privado antes de la Fase 2, cuando entra el motor de cálculo.
 
@@ -178,7 +180,7 @@ Cobertura exigida al motor: ≥ 90 % (hoy 99 %), verificada en la CI. Resultados
 | 4 | Interfaz: menú completo, asistente de 5 pasos, cálculo rápido, vista 2D | hecho ([interfaz](interfaz.md)) |
 | 5 | Calculadoras y convertidores | hecho ([calculadoras](calculadoras.md)) |
 | 6 | Hoja de datos y memoria de cálculo (PDF, Excel) | hecho ([reportes](reportes.md)) |
-| 7 | Instalador Windows, licencias, manual y ejemplos | |
+| 7 | Instalador Windows, licencias, manual y ejemplos | hecho ([manual](manual-usuario.md), [licencias](licencias.md)) |
 
 ## 10. Riesgos y puntos abiertos
 

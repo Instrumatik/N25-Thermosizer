@@ -1,0 +1,53 @@
+name: Release Windows
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+  # En los PR que tocan el empaquetado se genera el instalador como artefacto de prueba.
+  pull_request:
+    paths: ["packaging/**", ".github/workflows/release.yml", "pyproject.toml"]
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install ".[gui,reports,licensing,dev]" pyinstaller
+      - name: Pruebas
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python -m pytest -q
+      - name: Ejecutable (PyInstaller)
+        run: pyinstaller packaging/thermowell_sizer.spec --noconfirm
+      - name: Prueba de humo del ejecutable
+        shell: pwsh
+        run: |
+          $env:QT_QPA_PLATFORM = "offscreen"
+          $env:TWS_SMOKE_TEST = "1"
+          $p = Start-Process dist\ThermoWellSizer\ThermoWellSizer.exe -PassThru -Wait
+          if ($p.ExitCode -ne 0) { throw "La prueba de humo falló ($($p.ExitCode))" }
+      - name: Instalador (Inno Setup)
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+          $version = python -c "import thermowell_sizer; print(thermowell_sizer.__version__)"
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DAppVersion=$version" packaging\installer.iss
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ThermoWellSizer-windows
+          path: dist/ThermoWellSizer-*-setup.exe
+      - name: Publicar en la versión
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/ThermoWellSizer-*-setup.exe

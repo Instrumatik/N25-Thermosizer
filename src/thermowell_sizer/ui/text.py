@@ -75,6 +75,26 @@ UI: Final[dict[str, tuple[str, str]]] = {
     "act.shortcuts": ("Atajos de teclado", "Keyboard shortcuts"),
     "act.about": ("Acerca de…", "About…"),
     "act.license": ("Licencia…", "License…"),
+    "lic.title": ("Licencia de ThermoWell Sizer", "ThermoWell Sizer license"),
+    "lic.licensed": ("Licenciado a: {holder}\nEdición: {edition}\nEmitida: {issued}\n"
+                     "Vence: {expires}\nEquipo: {machine}",
+                     "Licensed to: {holder}\nEdition: {edition}\nIssued: {issued}\n"
+                     "Expires: {expires}\nMachine: {machine}"),
+    "lic.none": ("Versión de evaluación: todas las funciones están disponibles, pero los "
+                 "reportes llevan la marca de agua «VERSIÓN DE EVALUACIÓN».",
+                 "Evaluation version: every feature is available, but reports carry an "
+                 "\u201cEVALUATION VERSION\u201d watermark."),
+    "lic.never": ("sin vencimiento", "never"),
+    "lic.any": ("cualquiera", "any"),
+    "lic.fingerprint": ("Huella de este equipo (envíela para obtener una licencia):",
+                        "This machine's fingerprint (send it to obtain a license):"),
+    "lic.paste": ("Pegue aquí el código de licencia (TWS1.…)",
+                  "Paste the license code here (TWS1.…)"),
+    "lic.install": ("Instalar licencia", "Install license"),
+    "lic.copy": ("Copiar huella", "Copy fingerprint"),
+    "lic.ok": ("Licencia instalada a nombre de {holder}.", "License installed for {holder}."),
+    "lic.error": ("No se pudo instalar la licencia: {error}",
+                  "Could not install the license: {error}"),
     "act.disclaimer": ("Aviso de responsabilidad", "Disclaimer"),
     # Paneles
     "panel.tags": ("Tags del proyecto", "Project tags"),

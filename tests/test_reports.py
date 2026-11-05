@@ -93,3 +93,12 @@ def test_math_render() -> None:
     assert render_png(r"f_s = N_S V / B") is not None
     assert render_png(r"\badcommand{") is None
     assert "ρ" in plain(r"\rho V \text{o} x")
+
+
+def test_license_footer_and_watermark(tmp_path: Path) -> None:
+    from thermowell_sizer.reports.common import Fmt
+
+    assert "EVALUACIÓN" in Fmt().footer()
+    licensed = Fmt(licensee="Planta Norte")
+    assert "Planta Norte" in licensed.footer()
+    assert "EVALUACIÓN" not in licensed.footer()
