@@ -18,7 +18,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-gui = ["PySide6>=6.7"]
+gui = ["PySide6>=6.7", "matplotlib>=3.8"]
 reports = ["reportlab>=4.2", "openpyxl>=3.1", "python-docx>=1.1"]
 licensing = ["cryptography>=42"]
 dev = [
@@ -55,8 +55,12 @@ mypy_path = "src"
 packages = ["thermowell_sizer"]
 
 [[tool.mypy.overrides]]
-module = ["CoolProp.*", "scipy.*"]
+module = ["CoolProp.*", "scipy.*", "openpyxl.*", "docx.*", "reportlab.*", "thermocouples_reference.*"]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["thermowell_sizer.ui.charts", "thermowell_sizer.reports.*"]
+disallow_untyped_calls = false
 
 [tool.ruff]
 line-length = 100

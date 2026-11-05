@@ -1,0 +1,716 @@
+"""Editor de un tag: asistente de cinco pasos o modo experto con todo a la vista."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from pydantic import ValidationError
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QFormLayout,
+    QGridLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QListWidget,
+    QPushButton,
+    QScrollArea,
+    QStackedWidget,
+    QVBoxLayout,
+    QWidget,
+)
+
+from thermowell_sizer.core.models import (
+    CalcInput,
+    ConnectionType,
+    FlangeFace,
+    FlowBasis,
+    MountingOrientation,
+    Phase,
+    PropertySource,
+    SensorType,
+    ShankProfile,
+)
+from thermowell_sizer.core.units import QuantityKind
+from thermowell_sizer.core.validation import Severity, validate_geometry
+from thermowell_sizer.data.database import Library
+from thermowell_sizer.i18n import tr
+from thermowell_sizer.ui.state import STATE
+from thermowell_sizer.ui.text import enum_text, t
+from thermowell_sizer.ui.widgets import EnumCombo, QuantityEdit, fmt
+
+RATING_CLASSES = (150, 300, 600, 900, 1500, 2500)
+CASE_LABELS = ("min", "normal", "max")
+BASIS_KIND = {
+    FlowBasis.VELOCITY: QuantityKind.VELOCITY,
+    FlowBasis.MASS_FLOW: QuantityKind.MASS_FLOW,
+    FlowBasis.VOLUME_FLOW: QuantityKind.VOLUME_FLOW,
+}
+STEP_KEYS = ("step.identification", "step.process", "step.pipe", "step.thermowell",
+             "step.sensor")
+MAX_FLOW_CASES = 6
+CUSTOM_PIPE = "—"
+
+
+class FlowCaseRow(QWidget):
+    """Una fila de caso de flujo: etiqueta, dato y valor."""
+
+    changed = Signal()
+    remove = Signal(object)
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.label = QComboBox()
+        self.label.setEditable(True)
+        for key in CASE_LABELS:
+            self.label.addItem(enum_text(key), key)
+        self.basis = EnumCombo(list(FlowBasis))
+        self.values = {b: QuantityEdit(k, minimum=0.0) for b, k in BASIS_KIND.items()}
+        self.stack = QStackedWidget()
+        for b in FlowBasis:
+            self.stack.addWidget(self.values[b])
+            self.values[b].changed.connect(self.changed)
+        self.btn_remove = QPushButton("✕")
+        self.btn_remove.setFixedWidth(28)
+        self.btn_remove.setToolTip(t("f.remove_case"))
+        lay = QHBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.addWidget(self.label, 1)
+        lay.addWidget(self.basis, 1)
+        lay.addWidget(self.stack, 2)
+        lay.addWidget(self.btn_remove)
+        self.basis.currentIndexChanged.connect(self._basis_changed)
+        self.label.currentTextChanged.connect(lambda _: self.changed.emit())
+        self.btn_remove.clicked.connect(lambda: self.remove.emit(self))
+        self._basis_changed()
+
+    def _basis_changed(self) -> None:
+        self.stack.setCurrentWidget(self.values[FlowBasis(self.basis.value())])
+        self.changed.emit()
+
+    def label_value(self) -> str:
+        """Etiqueta interna del caso (min, normal, max o texto libre)."""
+        text = self.label.currentText().strip()
+        for i in range(self.label.count()):
+            if self.label.itemText(i) == text:
+                return str(self.label.itemData(i))
+        return text or "normal"
+
+    def to_dict(self) -> dict[str, Any]:
+        """Datos del caso para el modelo."""
+        basis = FlowBasis(self.basis.value())
+        return {"label": self.label_value(), "basis": basis.value,
+                basis.value: self.values[basis].value()}
+
+    def load(self, data: dict[str, Any]) -> None:
+        """Carga un caso."""
+        label = data["label"]
+        idx = self.label.findData(label)
+        self.label.blockSignals(True)
+        if idx >= 0:
+            self.label.setCurrentIndex(idx)
+        else:
+            self.label.setEditText(label)
+        self.label.blockSignals(False)
+        basis = FlowBasis(data["basis"])
+        self.basis.set_value(basis)
+        self.stack.setCurrentWidget(self.values[basis])
+        for b in FlowBasis:
+            self.values[b].set_value(data.get(b.value))
+
+    def refresh_units(self) -> None:
+        """Propaga el cambio de unidades."""
+        for v in self.values.values():
+            v.refresh_units()
+
+
+def _top(widget: QWidget) -> QWidget:
+    """Envuelve una sección para que quede arriba sin estirarse en alto."""
+    page = QWidget()
+    lay = QVBoxLayout(page)
+    lay.setContentsMargins(0, 0, 0, 0)
+    lay.addWidget(widget)
+    lay.addStretch(1)
+    return page
+
+
+def _form(group: QGroupBox) -> QFormLayout:
+    form = QFormLayout(group)
+    form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
+    form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
+    return form
+
+
+class TagEditor(QWidget):
+    """Formulario completo del tag.
+
+    Emite :attr:`changed` ante cualquier edición, :attr:`calculate_requested` al pedir
+    el cálculo, y mantiene la lista de errores de validación en tiempo real.
+    """
+
+    changed = Signal()
+    calculate_requested = Signal()
+
+    def __init__(self, library: Library, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.library = library
+        self._loading = False
+        self._base: CalcInput | None = None
+        self.quantities: dict[str, QuantityEdit] = {}
+        self.flow_rows: list[FlowCaseRow] = []
+        self.pages = [self._page_identification(), self._page_process(), self._page_pipe(),
+                      self._page_thermowell(), self._page_sensor()]
+
+        self.steps = QListWidget()
+        self.steps.setMaximumWidth(150)
+        for key in STEP_KEYS:
+            self.steps.addItem(t(key))
+        self.stack = QStackedWidget()
+        self.expert_container = QWidget()
+        self.expert_layout = QVBoxLayout(self.expert_container)
+        self.expert_scroll = QScrollArea()
+        self.expert_scroll.setWidgetResizable(True)
+        self.expert_scroll.setWidget(self.expert_container)
+        self.wizard_scroll = QScrollArea()
+        self.wizard_scroll.setWidgetResizable(True)
+        self.wizard_scroll.setWidget(self.stack)
+
+        self.btn_back = QPushButton(t("wiz.back"))
+        self.btn_next = QPushButton(t("wiz.next"))
+        self.btn_calc = QPushButton(t("wiz.calculate"))
+        self.btn_calc.setDefault(True)
+        self.error_label = QLabel()
+        self.error_label.setWordWrap(True)
+        self.error_label.setObjectName("errorLabel")
+        nav = QHBoxLayout()
+        nav.addWidget(self.btn_back)
+        nav.addWidget(self.btn_next)
+        nav.addStretch(1)
+        nav.addWidget(self.btn_calc)
+
+        body = QHBoxLayout()
+        body.addWidget(self.steps)
+        self.mode_stack = QStackedWidget()
+        self.mode_stack.addWidget(self.wizard_scroll)
+        self.mode_stack.addWidget(self.expert_scroll)
+        body.addWidget(self.mode_stack, 1)
+        root = QVBoxLayout(self)
+        root.addLayout(body, 1)
+        root.addWidget(self.error_label)
+        root.addLayout(nav)
+
+        self.steps.currentRowChanged.connect(self._goto)
+        self.btn_back.clicked.connect(lambda: self.step(-1))
+        self.btn_next.clicked.connect(lambda: self.step(1))
+        self.btn_calc.clicked.connect(self.calculate_requested)
+        self.expert = False
+        self._compact_combos()
+        self._place_pages()
+        self.steps.setCurrentRow(0)
+
+    # --- Construcción de páginas -------------------------------------------------------
+    def _q(self, name: str, kind: QuantityKind, **kw: Any) -> QuantityEdit:
+        q = QuantityEdit(kind, **kw)
+        q.changed.connect(self._emit)
+        q.setObjectName(name)
+        self.quantities[name] = q
+        return q
+
+    def _compact_combos(self) -> None:
+        """Evita que un texto largo en un combo ensanche todo el formulario."""
+        for combo in self.findChildren(QComboBox):
+            combo.setSizeAdjustPolicy(
+                QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+            combo.setMinimumContentsLength(10)
+
+    def _line(self) -> QLineEdit:
+        e = QLineEdit()
+        e.editingFinished.connect(self._emit)
+        return e
+
+    def _page_identification(self) -> QWidget:
+        box = QGroupBox(t("step.identification"))
+        f = _form(box)
+        self.e_tag = self._line()
+        self.e_service = self._line()
+        self.e_line = self._line()
+        self.e_pid = self._line()
+        self.e_location = self._line()
+        f.addRow(t("f.tag") + " *", self.e_tag)
+        f.addRow(t("f.service"), self.e_service)
+        f.addRow(t("f.line"), self.e_line)
+        f.addRow(t("f.pid"), self.e_pid)
+        f.addRow(t("f.location"), self.e_location)
+        return _top(box)
+
+    def _page_process(self) -> QWidget:
+        page = QWidget()
+        lay = QVBoxLayout(page)
+        box = QGroupBox(t("step.process"))
+        f = _form(box)
+        self.c_fluid = QComboBox()
+        for fl in self.library.fluids():
+            self.c_fluid.addItem(fl.name_es if STATE.language.value == "es" else fl.name_en,
+                                 fl.id)
+        self.c_fluid.currentIndexChanged.connect(self._emit)
+        self.c_phase = EnumCombo(list(Phase))
+        self.c_phase.currentIndexChanged.connect(self._emit)
+        f.addRow(t("f.fluid"), self.c_fluid)
+        f.addRow(t("f.phase"), self.c_phase)
+        f.addRow(t("f.p_op"), self._q("p_op", QuantityKind.PRESSURE, gauge_capable=True))
+        f.addRow(t("f.p_design"), self._q("p_design", QuantityKind.PRESSURE,
+                                           gauge_capable=True))
+        f.addRow(t("f.t_op"), self._q("t_op", QuantityKind.TEMPERATURE))
+        f.addRow(t("f.t_design"), self._q("t_design", QuantityKind.TEMPERATURE))
+        self.chk_auto = QCheckBox(t("f.auto_props"))
+        self.chk_auto.setChecked(True)
+        self.chk_auto.toggled.connect(self._auto_toggled)
+        f.addRow(self.chk_auto)
+        f.addRow(t("f.density"), self._q("density", QuantityKind.DENSITY, minimum=1e-9))
+        f.addRow(t("f.viscosity"), self._q("viscosity", QuantityKind.DYNAMIC_VISCOSITY,
+                                            minimum=1e-12))
+        self.lbl_source = QLabel()
+        self.lbl_source.setWordWrap(True)
+        f.addRow(t("f.prop_source"), self.lbl_source)
+        lay.addWidget(box)
+
+        cases = QGroupBox(t("f.flow_cases"))
+        self.cases_layout = QVBoxLayout(cases)
+        head = QHBoxLayout()
+        for key in ("f.case", "f.basis", "f.value"):
+            head.addWidget(QLabel(f"<b>{t(key)}</b>"), 2 if key == "f.value" else 1)
+        head.addSpacing(28)
+        self.cases_layout.addLayout(head)
+        self.btn_add_case = QPushButton(t("f.add_case"))
+        self.btn_add_case.clicked.connect(lambda: self._add_case(emit=True))
+        self.cases_layout.addWidget(self.btn_add_case, 0, Qt.AlignmentFlag.AlignLeft)
+        lay.addWidget(cases)
+
+        corr = QGroupBox(t("f.corrosion"))
+        g = QGridLayout(corr)
+        self.chk_nace = QCheckBox(t("f.nace"))
+        self.chk_erosive = QCheckBox(t("f.erosive"))
+        for chk in (self.chk_nace, self.chk_erosive):
+            chk.toggled.connect(self._emit)
+        g.addWidget(QLabel(t("f.h2s")), 0, 0)
+        g.addWidget(self._q("h2s", QuantityKind.PRESSURE, minimum=0.0, optional=True), 0, 1)
+        g.addWidget(QLabel(t("f.chlorides")), 1, 0)
+        self.e_chlorides = self._line()
+        g.addWidget(self.e_chlorides, 1, 1)
+        g.addWidget(QLabel(t("f.ph")), 2, 0)
+        self.e_ph = self._line()
+        g.addWidget(self.e_ph, 2, 1)
+        g.addWidget(self.chk_nace, 3, 0, 1, 2)
+        g.addWidget(self.chk_erosive, 4, 0, 1, 2)
+        lay.addWidget(corr)
+        lay.addStretch(1)
+        return page
+
+    def _page_pipe(self) -> QWidget:
+        box = QGroupBox(t("step.pipe"))
+        f = _form(box)
+        self.c_nps = QComboBox()
+        self.c_nps.addItems([*self.library.pipe_sizes(), CUSTOM_PIPE])
+        self.c_sch = QComboBox()
+        self.c_nps.currentIndexChanged.connect(self._nps_changed)
+        self.c_sch.currentIndexChanged.connect(self._pipe_changed)
+        f.addRow(t("f.nps"), self.c_nps)
+        f.addRow(t("f.schedule"), self.c_sch)
+        f.addRow(t("f.pipe_id"), self._q("pipe_id", QuantityKind.DIAMETER, minimum=1e-4))
+        self.c_orient = EnumCombo(list(MountingOrientation))
+        self.c_orient.currentIndexChanged.connect(self._emit)
+        f.addRow(t("f.orientation"), self.c_orient)
+        f.addRow(t("f.insulation"), self._q("insulation", QuantityKind.LENGTH, minimum=0.0))
+        f.addRow(t("f.nozzle"), self._q("nozzle", QuantityKind.LENGTH, minimum=0.0))
+        return _top(box)
+
+    def _page_thermowell(self) -> QWidget:
+        page = QWidget()
+        lay = QVBoxLayout(page)
+        left = QGroupBox(t("step.thermowell"))
+        f = _form(left)
+        self.c_profile = EnumCombo(list(ShankProfile))
+        self.c_profile.currentIndexChanged.connect(self._profile_changed)
+        self.c_conn = EnumCombo(list(ConnectionType))
+        self.c_conn.currentIndexChanged.connect(self._conn_changed)
+        self.e_conn_size = self._line()
+        self.c_rating = QComboBox()
+        for r in RATING_CLASSES:
+            self.c_rating.addItem(str(r), r)
+        self.c_rating.currentIndexChanged.connect(self._emit)
+        self.c_face = EnumCombo(list(FlangeFace))
+        self.c_face.currentIndexChanged.connect(self._emit)
+        self.c_material = QComboBox()
+        for m in self.library.materials():
+            self.c_material.addItem(f"{m.name} ({m.spec})", m.id)
+        self.c_material.currentIndexChanged.connect(self._emit)
+        self.c_coating = QComboBox()
+        self.c_coating.addItem(t("f.none"), "")
+        for c in self.library.coatings():
+            self.c_coating.addItem(c[1] if STATE.language.value == "es" else c[2], c[0])
+        self.c_coating.currentIndexChanged.connect(self._emit)
+        f.addRow(t("f.profile"), self.c_profile)
+        f.addRow(t("f.connection"), self.c_conn)
+        f.addRow(t("f.conn_size"), self.e_conn_size)
+        f.addRow(t("f.rating"), self.c_rating)
+        f.addRow(t("f.face"), self.c_face)
+        f.addRow(t("f.material"), self.c_material)
+        f.addRow(t("f.coating"), self.c_coating)
+        right = QGroupBox(t("f.dimensions"))
+        g = _form(right)
+        self.geometry_rows: dict[str, QLabel] = {}
+        for key, kind in (("L", QuantityKind.LENGTH), ("U", QuantityKind.LENGTH),
+                          ("A", QuantityKind.DIAMETER), ("B", QuantityKind.DIAMETER),
+                          ("d", QuantityKind.DIAMETER), ("t", QuantityKind.LENGTH),
+                          ("b", QuantityKind.LENGTH), ("Ls", QuantityKind.LENGTH),
+                          ("bs", QuantityKind.LENGTH), ("T_lag", QuantityKind.LENGTH),
+                          ("L0", QuantityKind.LENGTH), ("ca", QuantityKind.LENGTH)):
+            label = QLabel(t(f"f.{key}"))
+            self.geometry_rows[key] = label
+            optional = key in ("U",)
+            g.addRow(label, self._q(f"g_{key}", kind, minimum=0.0, optional=optional))
+        lay.addWidget(left)
+        lay.addWidget(right)
+        lay.addStretch(1)
+        return page
+
+    def _page_sensor(self) -> QWidget:
+        box = QGroupBox(t("step.sensor"))
+        f = _form(box)
+        self.c_sensor = EnumCombo(list(SensorType))
+        self.c_sensor.currentIndexChanged.connect(self._emit)
+        f.addRow(t("f.sensor_type"), self.c_sensor)
+        f.addRow(t("f.sheath"), self._q("sheath", QuantityKind.DIAMETER, minimum=1e-4))
+        self.chk_spring = QCheckBox(t("f.spring"))
+        self.chk_spring.toggled.connect(self._emit)
+        f.addRow(self.chk_spring)
+        f.addRow(t("f.sensor_mass"), self._q("sensor_mass", QuantityKind.MASS, minimum=0.0,
+                                              optional=True))
+        return _top(box)
+
+    # --- Modo asistente / experto ----------------------------------------------------
+    def set_expert(self, expert: bool) -> None:
+        """Muestra todas las secciones a la vez (experto) o paso a paso (asistente)."""
+        self.expert = expert
+        self._place_pages()
+
+    def _place_pages(self) -> None:
+        for page in self.pages:
+            page.setParent(None)
+        if self.expert:
+            for page in self.pages:
+                self.expert_layout.addWidget(page)
+            self.mode_stack.setCurrentWidget(self.expert_scroll)
+        else:
+            for page in self.pages:
+                self.stack.addWidget(page)
+            self.mode_stack.setCurrentWidget(self.wizard_scroll)
+            self.stack.setCurrentIndex(max(self.steps.currentRow(), 0))
+        self.steps.setVisible(not self.expert)
+        self.btn_back.setVisible(not self.expert)
+        self.btn_next.setVisible(not self.expert)
+
+    def step(self, delta: int) -> None:
+        """Avanza o retrocede un paso del asistente."""
+        row = min(max(self.steps.currentRow() + delta, 0), len(self.pages) - 1)
+        self.steps.setCurrentRow(row)
+
+    def _goto(self, row: int) -> None:
+        if not self.expert and row >= 0:
+            self.stack.setCurrentIndex(row)
+        self.btn_back.setEnabled(row > 0)
+        self.btn_next.setEnabled(row < len(self.pages) - 1)
+
+    # --- Reacciones internas ----------------------------------------------------------
+    def _emit(self) -> None:
+        if not self._loading:
+            self._update_enabled()
+            self.changed.emit()
+
+    def _auto_toggled(self) -> None:
+        self._update_enabled()
+        self._emit()
+
+    def _profile_changed(self) -> None:
+        if ShankProfile(self.c_profile.value()) is ShankProfile.STRAIGHT:
+            a = self.quantities["g_A"].value()
+            self.quantities["g_B"].set_value(a)
+        self._emit()
+
+    def _conn_changed(self) -> None:
+        self._emit()
+
+    def _nps_changed(self) -> None:
+        nps = self.c_nps.currentText()
+        self.c_sch.blockSignals(True)
+        self.c_sch.clear()
+        if nps != CUSTOM_PIPE:
+            self.c_sch.addItems(self.library.schedules(nps))
+            idx = self.c_sch.findText("40")
+            self.c_sch.setCurrentIndex(max(idx, 0))
+        self.c_sch.blockSignals(False)
+        self._pipe_changed()
+
+    def _pipe_changed(self) -> None:
+        nps = self.c_nps.currentText()
+        if nps != CUSTOM_PIPE and self.c_sch.currentText():
+            pipe = self.library.pipe(nps, self.c_sch.currentText())
+            self.quantities["pipe_id"].set_value(pipe.inner_diameter)
+        self._emit()
+
+    def _update_enabled(self) -> None:
+        auto = self.chk_auto.isChecked()
+        self.quantities["density"].setEnabled(not auto)
+        self.quantities["viscosity"].setEnabled(not auto)
+        self.c_phase.setEnabled(not auto)
+        profile = ShankProfile(self.c_profile.value())
+        stepped = profile is ShankProfile.STEPPED
+        for key in ("Ls", "bs"):
+            self.quantities[f"g_{key}"].setEnabled(stepped)
+            self.geometry_rows[key].setEnabled(stepped)
+        self.quantities["g_B"].setEnabled(profile is not ShankProfile.STRAIGHT)
+        flanged = ConnectionType(self.c_conn.value()) in (ConnectionType.FLANGED,
+                                                           ConnectionType.VAN_STONE)
+        self.c_rating.setEnabled(flanged)
+        self.c_face.setEnabled(flanged)
+        self.quantities["pipe_id"].setEnabled(self.c_nps.currentText() == CUSTOM_PIPE)
+        self.c_sch.setEnabled(self.c_nps.currentText() != CUSTOM_PIPE)
+        self.btn_add_case.setEnabled(len(self.flow_rows) < MAX_FLOW_CASES)
+        for row in self.flow_rows:
+            row.btn_remove.setEnabled(len(self.flow_rows) > 1)
+
+    def _add_case(self, *, emit: bool) -> FlowCaseRow:
+        row = FlowCaseRow()
+        row.changed.connect(self._emit)
+        row.remove.connect(self._remove_case)
+        self.flow_rows.append(row)
+        self.cases_layout.insertWidget(self.cases_layout.count() - 1, row)
+        if emit:
+            self._emit()
+        return row
+
+    def _remove_case(self, row: FlowCaseRow) -> None:
+        if len(self.flow_rows) <= 1:
+            return
+        self.flow_rows.remove(row)
+        row.setParent(None)
+        row.deleteLater()
+        self._emit()
+
+    # --- Carga y lectura del modelo ---------------------------------------------------
+    def load(self, inp: CalcInput, *, auto_properties: bool = True) -> None:
+        """Muestra los datos de ``inp`` en el formulario."""
+        self._loading = True
+        self._base = inp
+        q = self.quantities
+        idn, proc, pipe = inp.identification, inp.process, inp.pipe
+        tw, sensor = inp.thermowell, inp.sensor
+        g = tw.geometry
+        self.e_tag.setText(idn.tag)
+        self.e_service.setText(idn.service)
+        self.e_line.setText(idn.line_or_equipment)
+        self.e_pid.setText(idn.pid)
+        self.e_location.setText(idn.location)
+        idx = self.c_fluid.findData(proc.fluid_id)
+        self.c_fluid.setCurrentIndex(max(idx, 0))
+        self.c_phase.set_value(proc.phase)
+        q["p_op"].set_value(proc.operating_pressure)
+        q["p_design"].set_value(proc.design_pressure)
+        q["t_op"].set_value(proc.operating_temperature)
+        q["t_design"].set_value(proc.design_temperature)
+        self.chk_auto.setChecked(auto_properties)
+        self.show_properties(inp)
+        for row in list(self.flow_rows):
+            row.setParent(None)
+        self.flow_rows.clear()
+        for case in proc.flow_cases:
+            self._add_case(emit=False).load(case.model_dump())
+        corr = proc.corrosion
+        q["h2s"].set_value(corr.h2s_partial_pressure or None)
+        self.e_chlorides.setText(fmt(corr.chlorides_ppm, 0) if corr.chlorides_ppm else "")
+        self.e_ph.setText(fmt(corr.ph, 1) if corr.ph is not None else "")
+        self.chk_nace.setChecked(corr.nace_service)
+        self.chk_erosive.setChecked(corr.solids_or_erosive)
+        nps_idx = self.c_nps.findText(pipe.nominal_size)
+        self.c_nps.blockSignals(True)
+        self.c_nps.setCurrentIndex(nps_idx if nps_idx >= 0 else self.c_nps.count() - 1)
+        self.c_nps.blockSignals(False)
+        self.c_sch.blockSignals(True)
+        self.c_sch.clear()
+        if self.c_nps.currentText() != CUSTOM_PIPE:
+            self.c_sch.addItems(self.library.schedules(pipe.nominal_size))
+            self.c_sch.setCurrentIndex(max(self.c_sch.findText(pipe.schedule), 0))
+        self.c_sch.blockSignals(False)
+        q["pipe_id"].set_value(pipe.inner_diameter)
+        self.c_orient.set_value(pipe.orientation)
+        q["insulation"].set_value(pipe.insulation_thickness)
+        q["nozzle"].set_value(pipe.nozzle_length)
+        self.c_profile.set_value(g.profile)
+        self.c_conn.set_value(tw.connection.type)
+        self.e_conn_size.setText(tw.connection.size)
+        if tw.connection.rating_class:
+            self.c_rating.setCurrentIndex(max(self.c_rating.findData(tw.connection.rating_class),
+                                              0))
+        if tw.connection.face:
+            self.c_face.set_value(tw.connection.face)
+        self.c_material.setCurrentIndex(max(self.c_material.findData(tw.material.material_id),
+                                            0))
+        self.c_coating.setCurrentIndex(max(self.c_coating.findData(tw.material.coating), 0))
+        for key in ("L", "U", "A", "B", "d", "t", "b", "Ls", "bs", "T_lag", "L0"):
+            q[f"g_{key}"].set_value(getattr(g, key))
+        q["g_ca"].set_value(g.corrosion_allowance)
+        self.c_sensor.set_value(sensor.type)
+        q["sheath"].set_value(sensor.sheath_diameter)
+        self.chk_spring.setChecked(sensor.spring_loaded)
+        q["sensor_mass"].set_value(sensor.mass)
+        self._loading = False
+        self._update_enabled()
+        self.validate()
+
+    def show_properties(self, inp: CalcInput) -> None:
+        """Muestra ρ, μ y su fuente (tras recalcular con CoolProp)."""
+        props = inp.process.properties
+        self.quantities["density"].set_value(props.density)
+        self.quantities["viscosity"].set_value(props.dynamic_viscosity)
+        source = {PropertySource.COOLPROP: "CoolProp", PropertySource.LIBRARY: "Biblioteca",
+                  PropertySource.USER: "Usuario"}[props.source]
+        self.lbl_source.setText(props.source_note or source)
+        if self.chk_auto.isChecked():
+            self.c_phase.set_value(inp.process.phase)
+
+    def _number(self, edit: QLineEdit) -> float | None:
+        text = edit.text().strip()
+        if not text:
+            return None
+        from thermowell_sizer.i18n import parse_number
+
+        return parse_number(text, STATE.language)
+
+    def raw(self) -> dict[str, Any]:
+        """Datos del formulario como diccionario compatible con :class:`CalcInput`."""
+        q = self.quantities
+        base = self._base
+        conn = ConnectionType(self.c_conn.value())
+        flanged = conn in (ConnectionType.FLANGED, ConnectionType.VAN_STONE)
+        profile = ShankProfile(self.c_profile.value())
+        a = q["g_A"].value()
+        props: dict[str, Any] = {
+            "density": q["density"].value(), "dynamic_viscosity": q["viscosity"].value(),
+            "source": (base.process.properties.source.value if base and self.chk_auto.isChecked()
+                       else PropertySource.USER.value),
+            "source_note": base.process.properties.source_note if base else "",
+        }
+        nps = self.c_nps.currentText()
+        return {
+            "identification": {"tag": self.e_tag.text().strip(),
+                               "service": self.e_service.text(),
+                               "line_or_equipment": self.e_line.text(),
+                               "pid": self.e_pid.text(), "location": self.e_location.text()},
+            "process": {
+                "fluid_id": self.c_fluid.currentData(),
+                "phase": self.c_phase.value().value,
+                "operating_pressure": q["p_op"].value(),
+                "design_pressure": q["p_design"].value(),
+                "operating_temperature": q["t_op"].value(),
+                "design_temperature": q["t_design"].value(),
+                "flow_cases": [r.to_dict() for r in self.flow_rows],
+                "properties": props,
+                "corrosion": {
+                    "h2s_partial_pressure": q["h2s"].value() or 0.0,
+                    "chlorides_ppm": self._number(self.e_chlorides) or 0.0,
+                    "ph": self._number(self.e_ph),
+                    "solids_or_erosive": self.chk_erosive.isChecked(),
+                    "nace_service": self.chk_nace.isChecked(),
+                },
+            },
+            "pipe": {
+                "nominal_size": "" if nps == CUSTOM_PIPE else nps,
+                "schedule": "" if nps == CUSTOM_PIPE else self.c_sch.currentText(),
+                "inner_diameter": q["pipe_id"].value(),
+                "orientation": self.c_orient.value().value,
+                "insulation_thickness": q["insulation"].value() or 0.0,
+                "nozzle_length": q["nozzle"].value() or 0.0,
+            },
+            "thermowell": {
+                "geometry": {
+                    "profile": profile.value,
+                    "L": q["g_L"].value(), "U": q["g_U"].value(), "A": a,
+                    "B": a if profile is ShankProfile.STRAIGHT else q["g_B"].value(),
+                    "d": q["g_d"].value(), "t": q["g_t"].value(),
+                    "b": q["g_b"].value() or 0.0,
+                    "Ls": (q["g_Ls"].value() or 0.0) if profile is ShankProfile.STEPPED else 0.0,
+                    "bs": (q["g_bs"].value() or 0.0) if profile is ShankProfile.STEPPED else 0.0,
+                    "T_lag": q["g_T_lag"].value() or 0.0, "L0": q["g_L0"].value() or 0.0,
+                    "corrosion_allowance": q["g_ca"].value() or 0.0,
+                },
+                "material": {"material_id": self.c_material.currentData(),
+                             "coating": self.c_coating.currentData()},
+                "connection": {
+                    "type": conn.value, "size": self.e_conn_size.text(),
+                    "rating_class": self.c_rating.currentData() if flanged else None,
+                    "face": self.c_face.value().value if flanged else None,
+                },
+            },
+            "sensor": {
+                "type": self.c_sensor.value().value,
+                "sheath_diameter": q["sheath"].value(),
+                "mass": q["sensor_mass"].value(),
+                "spring_loaded": self.chk_spring.isChecked(),
+            },
+        }
+
+    def to_input(self) -> CalcInput | None:
+        """Construye la entrada; si es inválida devuelve ``None`` y muestra los errores."""
+        try:
+            raw = self.raw()
+        except ValueError as exc:
+            self._show_errors([str(exc)])
+            return None
+        try:
+            inp = CalcInput.model_validate(raw)
+        except ValidationError as exc:
+            messages = []
+            for err in exc.errors():
+                loc = ".".join(str(x) for x in err["loc"])
+                messages.append(f"{loc}: {err['msg']}")
+            self._show_errors(messages)
+            return None
+        return inp
+
+    def validate(self) -> CalcInput | None:
+        """Validación en tiempo real: marca campos y lista los problemas."""
+        for qe in self.quantities.values():
+            qe.set_error(None)
+        inp = self.to_input()
+        if inp is None:
+            return None
+        msgs: list[str] = []
+        for issue in validate_geometry(inp.thermowell.geometry):
+            params = {k: fmt(v) if isinstance(v, float) else v for k, v in issue.params.items()}
+            text = tr(issue.message_key, STATE.language, **params)
+            field = self.quantities.get(f"g_{issue.field}")
+            if field is not None:
+                field.set_error(text)
+            icon = "⛔" if issue.severity is Severity.ERROR else "⚠"
+            msgs.append(f"{icon} {issue.field}: {text} ({issue.reference})")
+        self._show_errors(msgs, ok=True)
+        return inp
+
+    def _show_errors(self, messages: list[str], *, ok: bool = False) -> None:
+        self.error_label.setProperty("ok", ok and not messages)
+        self.error_label.setText("\n".join(messages[:6]))
+        self.error_label.setVisible(bool(messages))
+
+    def current_step(self) -> int:
+        """Paso visible del asistente."""
+        return self.steps.currentRow()
+
+    def refresh_units(self) -> None:
+        """Propaga un cambio de unidades a todos los campos."""
+        for qe in self.quantities.values():
+            qe.refresh_units()
+        for row in self.flow_rows:
+            row.refresh_units()

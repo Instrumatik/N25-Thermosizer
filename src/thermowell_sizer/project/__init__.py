@@ -15,7 +15,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from thermowell_sizer.core.models import CalcInput, CheckStatus
+from thermowell_sizer.core.models import CalcInput, CheckStatus, EngineOptions
 from thermowell_sizer.core.units import STANDARD_ATMOSPHERE_PA, UnitSystem
 from thermowell_sizer.i18n import Language
 
@@ -61,6 +61,10 @@ class TagRecord(_Model):
     """Un punto de medición del proyecto con el estado de su último cálculo."""
 
     input: CalcInput
+    options: EngineOptions = EngineOptions()
+    auto_properties: bool = Field(
+        default=True, description="Recalcular ρ y μ con CoolProp al cambiar P o T"
+    )
     last_status: CheckStatus | None = None
     notes: str = ""
 
