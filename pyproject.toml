@@ -1,0 +1,70 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "thermowell-sizer"
+version = "0.1.0.dev0"
+description = "Dimensionamiento y verificación de termopozos según ASME PTC 19.3 TW-2016"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { file = "LICENSE.txt" }
+authors = [{ name = "InstruMatik" }]
+dependencies = [
+    "pydantic>=2.7,<3",
+    "numpy>=2.0",
+    "scipy>=1.13",
+    "CoolProp>=6.6",
+]
+
+[project.optional-dependencies]
+gui = ["PySide6>=6.7"]
+reports = ["reportlab>=4.2", "openpyxl>=3.1", "python-docx>=1.1"]
+licensing = ["cryptography>=42"]
+dev = [
+    "pytest>=8",
+    "pytest-cov>=5",
+    "mypy>=1.10",
+    "ruff>=0.5",
+]
+
+[project.gui-scripts]
+thermowell-sizer = "thermowell_sizer.ui.app:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/thermowell_sizer"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+
+[tool.coverage.run]
+source = ["thermowell_sizer.core"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+mypy_path = "src"
+packages = ["thermowell_sizer"]
+
+[[tool.mypy.overrides]]
+module = ["CoolProp.*", "scipy.*"]
+ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "RUF", "D"]
+ignore = ["D203", "D213", "D105", "D107", "RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D"]
