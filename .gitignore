@@ -1,0 +1,21 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.spec.bak
+
+# Datos locales del usuario
+*.sqlite-journal
+user_data/
+
+# Las normas son documentos con licencia: nunca se versionan
+*.pdf
+!docs/**/*_propio.pdf

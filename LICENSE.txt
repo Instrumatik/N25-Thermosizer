@@ -1,0 +1,9 @@
+Copyright (c) 2026 InstruMatik. Todos los derechos reservados.
+
+Este software y su código fuente son propiedad de InstruMatik. No se concede
+ninguna licencia de uso, copia, modificación ni distribución sin autorización
+previa y por escrito del titular. El uso del programa compilado se rige por el
+acuerdo de licencia de usuario final que acompaña a cada clave de licencia.
+
+All rights reserved. No license is granted to use, copy, modify or distribute
+this software without prior written permission from the copyright holder.
