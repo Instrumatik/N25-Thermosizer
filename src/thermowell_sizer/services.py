@@ -33,13 +33,42 @@ from thermowell_sizer.core.models import (
     Thermowell,
     ThermowellGeometry,
 )
-from thermowell_sizer.core.ptc19_3.verify import VerificationResult, verify
+from thermowell_sizer.core.ptc19_3.verify import VerificationResult, resolve_velocity, verify
+from thermowell_sizer.core.tools.heat import (
+    THERMAL_BY_FAMILY,
+    film_coefficient,
+    immersion_error,
+    time_constant,
+)
 from thermowell_sizer.core.units import BAR_PA, INCH_M, KELVIN_OFFSET, STANDARD_ATMOSPHERE_PA
 from thermowell_sizer.data.database import Library
 from thermowell_sizer.project import ProjectSettings, TagRecord
-from thermowell_sizer.properties.fluids import FluidPropertyError, fluid_state
+from thermowell_sizer.properties.fluids import (
+    FluidPropertyError,
+    fluid_state,
+    thermal_properties,
+)
 
 FLANGED_TYPES = (ConnectionType.FLANGED, ConnectionType.VAN_STONE)
+
+
+AMBIENT_TEMPERATURE = 293.15
+"""Temperatura supuesta en la base del termopozo (cabezal), K."""
+IMMERSION_TOLERANCE = 0.1
+"""Error de conducción objetivo para la inmersión mínima recomendada, K."""
+
+
+@dataclass(frozen=True, slots=True)
+class ThermalEstimate:
+    """Criterios adicionales (fuera de PTC 19.3 TW): error de inmersión y respuesta."""
+
+    h: float
+    immersion_error: float
+    min_immersion: float | None
+    exposed_length: float
+    tau: float
+    t90: float
+    generic_fluid_data: bool
 
 
 @dataclass(slots=True)
@@ -52,6 +81,7 @@ class Evaluation:
     result: VerificationResult | None = None
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    thermal: ThermalEstimate | None = None
 
     @property
     def status(self) -> CheckStatus | None:
@@ -148,7 +178,35 @@ def evaluate(record: TagRecord, library: Library, settings: ProjectSettings) -> 
     ev.options, notes = resolve_options(inp, record.options, library, settings)
     ev.warnings.extend(notes)
     ev.result = verify(inp, ev.material, ev.options)
+    ev.thermal = thermal_estimate(inp, library)
     return ev
+
+
+def thermal_estimate(inp: CalcInput, library: Library) -> ThermalEstimate | None:
+    """Error por conducción e inercia térmica para el caso de mayor velocidad."""
+    proc = inp.process
+    g = inp.thermowell.geometry
+    try:
+        info = library.material(inp.thermowell.material.material_id)
+    except KeyError:
+        return None
+    k_wall, cp_wall = THERMAL_BY_FAMILY.get(info.family, THERMAL_BY_FAMILY["austenitic"])
+    k_f, cp_f, generic = thermal_properties(library, proc.fluid_id, proc.operating_temperature,
+                                            proc.operating_pressure, proc.phase)
+    rho, mu = proc.properties.density, proc.properties.dynamic_viscosity
+    v = max(resolve_velocity(c, rho, inp.pipe.inner_diameter) for c in proc.flow_cases)
+    d_mean = (g.A + g.B) / 2
+    h = film_coefficient(rho, v, d_mean, mu, k_f, cp_f)
+    exposed = max(g.L - g.L0, 1e-6)
+    imm = immersion_error(fluid_temperature=proc.operating_temperature,
+                          base_temperature=AMBIENT_TEMPERATURE, h=h, length=exposed,
+                          outer_diameter=d_mean, bore=g.d, conductivity=k_wall,
+                          tolerance=IMMERSION_TOLERANCE)
+    h_tip = film_coefficient(rho, v, g.B, mu, k_f, cp_f)
+    tau = time_constant(h=h_tip, outer_diameter=g.B, bore=g.d, wall_density=info.density,
+                        wall_specific_heat=cp_wall,
+                        sensor_diameter=min(inp.sensor.sheath_diameter, g.d))
+    return ThermalEstimate(h, imm.error, imm.min_length, exposed, tau.total, tau.t90, generic)
 
 
 # --- Importación masiva ---------------------------------------------------------------
