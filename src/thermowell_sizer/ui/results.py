@@ -22,6 +22,7 @@ from thermowell_sizer.core.analysis.optimize import Alternative
 from thermowell_sizer.core.models import CheckResult, CheckStatus
 from thermowell_sizer.core.units import QuantityKind
 from thermowell_sizer.i18n import tr
+from thermowell_sizer.reports.common import CRITERION_NAMES, SCOPE_NAMES
 from thermowell_sizer.services import Evaluation
 from thermowell_sizer.ui.state import STATE
 from thermowell_sizer.ui.text import t
@@ -36,21 +37,6 @@ CRITERION_KIND: dict[str, tuple[QuantityKind, bool]] = {
     "frequency_limit": (QuantityKind.FREQUENCY, False),
     "inline_lockin_dwell": (QuantityKind.FREQUENCY, False),
     "fatigue_data": (QuantityKind.STRESS, False),
-}
-CRITERION_NAMES: dict[str, tuple[str, str]] = {
-    "scope": ("Alcance de la norma", "Scope of the standard"),
-    "material_temperature": ("Temperatura del material", "Material temperature"),
-    "fatigue_data": ("Datos de fatiga", "Fatigue data"),
-    "pressure_rating": ("Presión externa", "External pressure"),
-    "pressure_high_service": ("Servicio de alta presión", "High-pressure service"),
-    "flange_rating": ("Rating de brida", "Flange rating"),
-    "low_velocity": ("Exención por baja velocidad", "Low-velocity exemption"),
-    "steady_stress_support": ("Esfuerzo estacionario (soporte)", "Steady stress (support)"),
-    "steady_stress_step": ("Esfuerzo estacionario (escalón)", "Steady stress (step)"),
-    "dynamic_stress_support": ("Esfuerzo dinámico (soporte)", "Dynamic stress (support)"),
-    "dynamic_stress_step": ("Esfuerzo dinámico (escalón)", "Dynamic stress (step)"),
-    "frequency_limit": ("Límite de frecuencia", "Frequency limit"),
-    "inline_lockin_dwell": ("Captura en línea", "In-line lock-in"),
 }
 MARGIN_DECIMALS = 1
 
@@ -81,9 +67,7 @@ def scope_label(scope: str) -> str:
     if not scope:
         return "—"
     base, _, variant = scope.partition("|")
-    names = {"min": ("Mín.", "Min"), "normal": ("Normal", "Normal"), "max": ("Máx.", "Max"),
-             "root_corrosion": ("corr. raíz", "root corr."),
-             "tip_corrosion": ("corr. punta", "tip corr.")}
+    names = SCOPE_NAMES
     idx = 0 if STATE.language.value == "es" else 1
     text = names.get(base, (base, base))[idx]
     if variant:

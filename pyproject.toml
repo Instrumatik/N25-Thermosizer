@@ -61,6 +61,7 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = ["thermowell_sizer.ui.charts", "thermowell_sizer.reports.*"]
 disallow_untyped_calls = false
+disallow_subclassing_any = false
 
 [tool.ruff]
 line-length = 100
