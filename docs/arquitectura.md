@@ -175,7 +175,7 @@ Cobertura exigida al motor: ≥ 90 % (hoy 99 %), verificada en la CI. Resultados
 | 1 | Arquitectura, modelo de datos, estructura, CI | hecho |
 | 2 | Motor ASME PTC 19.3 TW completo + casos de referencia | hecho ([validación](validacion-motor.md)) |
 | 3 | Materiales (17 + recubrimientos), fluidos, bridas B16.5, glosario | hecho ([datos](datos-biblioteca.md)) |
-| 4 | Interfaz: menú completo, asistente de 5 pasos, cálculo rápido, vista 2D | |
+| 4 | Interfaz: menú completo, asistente de 5 pasos, cálculo rápido, vista 2D | hecho ([interfaz](interfaz.md)) |
 | 5 | Calculadoras y convertidores | |
 | 6 | Hoja de datos y memoria de cálculo (PDF, Excel) | |
 | 7 | Instalador Windows, licencias, manual y ejemplos | |
