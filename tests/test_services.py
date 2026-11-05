@@ -59,7 +59,8 @@ def test_import_csv(tmp_path: Path, lib: Library) -> None:
     assert len(records) == 1 and len(errors) == 1
     rec = records[0]
     assert rec.input.identification.tag == "TW-101"
-    assert pytest.approx(0.2) == rec.input.thermowell.geometry.L
+    length = rec.input.thermowell.geometry.L
+    assert length == pytest.approx(0.2)
     assert evaluate(rec, lib, ProjectSettings()).status is not None
 
 
