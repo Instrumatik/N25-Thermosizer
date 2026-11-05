@@ -31,6 +31,8 @@ class TraceEntry:
         expression: expresión simbólica en LaTeX.
         inputs: símbolos de entrada usados en la sustitución y sus valores SI.
         input_kinds: magnitud de cada entrada, para presentar la sustitución.
+        scope: caso al que pertenece el paso (p. ej. ``"max"`` o ``"max · corrosión raíz"``);
+            vacío para valores comunes a todos los casos.
 
     """
 
@@ -42,6 +44,7 @@ class TraceEntry:
     expression: str
     inputs: Mapping[str, float] = field(default_factory=dict)
     input_kinds: Mapping[str, QuantityKind] = field(default_factory=dict)
+    scope: str = ""
 
 
 class CalcTrace:
@@ -49,7 +52,7 @@ class CalcTrace:
 
     def __init__(self) -> None:
         self._entries: list[TraceEntry] = []
-        self._by_symbol: dict[str, TraceEntry] = {}
+        self._by_key: dict[tuple[str, str], TraceEntry] = {}
 
     def record(
         self,
@@ -61,15 +64,18 @@ class CalcTrace:
         expression: str,
         description_key: str,
         inputs: Mapping[str, tuple[float, QuantityKind]] | None = None,
+        scope: str = "",
     ) -> float:
         """Registra un paso y devuelve ``value`` para poder encadenar cálculos.
 
         Raises:
-            ValueError: si el símbolo ya fue registrado (evita sobrescrituras silenciosas).
+            ValueError: si el símbolo ya fue registrado en el mismo ``scope``
+                (evita sobrescrituras silenciosas).
 
         """
-        if symbol in self._by_symbol:
-            raise ValueError(f"El símbolo '{symbol}' ya está registrado en la traza")
+        key = (scope, symbol)
+        if key in self._by_key:
+            raise ValueError(f"El símbolo '{symbol}' ya está registrado en la traza ({scope})")
         raw = inputs or {}
         entry = TraceEntry(
             symbol=symbol,
@@ -80,18 +86,35 @@ class CalcTrace:
             expression=expression,
             inputs={k: v for k, (v, _) in raw.items()},
             input_kinds={k: q for k, (_, q) in raw.items()},
+            scope=scope,
         )
         self._entries.append(entry)
-        self._by_symbol[symbol] = entry
+        self._by_key[key] = entry
         return value
 
+    def get(self, symbol: str, scope: str = "") -> TraceEntry:
+        """Devuelve el paso que produjo ``symbol`` en ``scope``.
+
+        Raises:
+            KeyError: si no existe.
+        """
+        return self._by_key[(scope, symbol)]
+
+    def value(self, symbol: str, scope: str = "") -> float:
+        """Atajo para el valor SI de ``symbol`` en ``scope``."""
+        return self.get(symbol, scope).value
+
     def __getitem__(self, symbol: str) -> TraceEntry:
-        """Devuelve el paso que produjo ``symbol``."""
-        return self._by_symbol[symbol]
+        """Devuelve el paso que produjo ``symbol`` sin ``scope``."""
+        return self.get(symbol)
 
     def __contains__(self, symbol: object) -> bool:
-        """Indica si ``symbol`` fue registrado."""
-        return symbol in self._by_symbol
+        """Indica si ``symbol`` fue registrado sin ``scope``."""
+        return ("", symbol) in self._by_key
+
+    def scopes(self) -> list[str]:
+        """Casos presentes en la traza, en orden de aparición."""
+        return list(dict.fromkeys(e.scope for e in self._entries))
 
     def __iter__(self) -> Iterator[TraceEntry]:
         """Itera los pasos en el orden en que se calcularon."""

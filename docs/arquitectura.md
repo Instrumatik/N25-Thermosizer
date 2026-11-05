@@ -153,7 +153,8 @@ No hay memorias anteriores para comparar, así que la validación se arma así:
    continuidad de las correlaciones y simetría SI ↔ Imperial (mismo resultado en ambos
    sistemas).
 
-Cobertura exigida al motor: ≥ 90 % (hoy 100 %), verificada en la CI.
+Cobertura exigida al motor: ≥ 90 % (hoy 99 %), verificada en la CI. Resultados en
+[validacion-motor.md](validacion-motor.md).
 
 ## 8. Licenciamiento y distribución
 
@@ -171,8 +172,8 @@ Cobertura exigida al motor: ≥ 90 % (hoy 100 %), verificada en la CI.
 
 | Fase | Entregable | Estado |
 |---|---|---|
-| 1 | Arquitectura, modelo de datos, estructura, CI | este PR |
-| 2 | Motor ASME PTC 19.3 TW completo + casos de referencia | siguiente |
+| 1 | Arquitectura, modelo de datos, estructura, CI | hecho |
+| 2 | Motor ASME PTC 19.3 TW completo + casos de referencia | hecho ([validación](validacion-motor.md)) |
 | 3 | Materiales (17 + recubrimientos), fluidos, bridas B16.5, glosario | |
 | 4 | Interfaz: menú completo, asistente de 5 pasos, cálculo rápido, vista 2D | |
 | 5 | Calculadoras y convertidores | |
