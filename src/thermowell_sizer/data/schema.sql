@@ -25,6 +25,11 @@ CREATE TABLE IF NOT EXISTS material (
     uns               TEXT NOT NULL DEFAULT '',
     family            TEXT NOT NULL,      -- carbon, low_alloy, austenitic, duplex, nickel, ...
     fatigue_class     TEXT NOT NULL CHECK (fatigue_class IN ('A', 'B')),
+    fatigue_covered   INTEGER NOT NULL DEFAULT 1, -- figura en la tabla 6-12.3-1
+    e_ref             REAL NOT NULL,      -- E_ref para F_T, Pa
+    scc_chlorides     INTEGER NOT NULL DEFAULT 0,
+    notes_es          TEXT NOT NULL DEFAULT '',
+    notes_en          TEXT NOT NULL DEFAULT '',
     max_temperature   REAL NOT NULL,      -- K
     min_temperature   REAL,               -- K
     density           REAL NOT NULL,      -- kg/m³ a temperatura ambiente
@@ -44,6 +49,14 @@ CREATE TABLE IF NOT EXISTS material_property_point (
     value        REAL NOT NULL,           -- SI
     source_id    TEXT REFERENCES source(id),
     PRIMARY KEY (material_id, property, temperature)
+);
+
+CREATE TABLE IF NOT EXISTS coating (
+    id               TEXT PRIMARY KEY,
+    name_es          TEXT NOT NULL,
+    name_en          TEXT NOT NULL,
+    purpose          TEXT NOT NULL,       -- erosion | corrosion
+    max_temperature  REAL NOT NULL        -- K
 );
 
 -- Fluidos ----------------------------------------------------------------------------

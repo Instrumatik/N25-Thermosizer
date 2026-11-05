@@ -54,6 +54,10 @@ ENGINE_ES: Final[dict[str, str]] = {
         "En régimen permanente fs cae en la banda de captura en línea (0,4 a 0,6·f_n^c)."
     ),
     "check.lockin_clear": "En régimen permanente fs queda fuera de la banda de captura.",
+    "check.fatigue_data_missing": (
+        "El material no figura en la tabla de límites de fatiga: se usa el valor de su "
+        "clase como referencia; la norma exige determinarlo por ensayo."
+    ),
     # Notas
     "note.two_phase": (
         "Flujo bifásico: las correlaciones son para una sola fase; use la condición más "
@@ -192,6 +196,10 @@ ENGINE_EN: Final[dict[str, str]] = {
     ),
     "check.lockin_dwell": "At steady state fs lies in the in-line lock-in band (0.4-0.6·f_n^c).",
     "check.lockin_clear": "At steady state fs lies outside the lock-in band.",
+    "check.fatigue_data_missing": (
+        "Material not in the fatigue-limit table: its class value is used as reference; "
+        "the standard requires test data."
+    ),
     "note.two_phase": (
         "Two-phase flow: correlations are single-phase; use the worst condition and "
         "engineering judgement."

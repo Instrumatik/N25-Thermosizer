@@ -225,3 +225,13 @@ def test_very_high_pressure_rating_warning(calc_input: CalcInput) -> None:
 def test_amber_margin(calc_input: CalcInput) -> None:
     result = verify(calc_input, F22, EngineOptions(amber_margin_pct=100.0))
     assert result.worst("pressure_rating").status is CheckStatus.WARNING  # type: ignore[union-attr]
+
+
+def test_fatigue_not_covered(calc_input: CalcInput) -> None:
+    ti = F22.model_copy(update={"fatigue_table_covered": False})
+    result = verify(calc_input, ti)
+    assert result.worst("fatigue_data").status is CheckStatus.WARNING  # type: ignore[union-attr]
+    tested = ti.model_copy(update={"fatigue_limit_override": 30e6})
+    res2 = verify(calc_input, tested)
+    assert res2.worst("fatigue_data") is None
+    assert res2.trace.value("S_f_adm", "max") == pytest.approx(30e6 * 180 / 213)
