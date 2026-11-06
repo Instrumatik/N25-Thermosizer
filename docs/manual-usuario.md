@@ -1,4 +1,4 @@
-# ThermoWell Sizer 1.0: manual de usuario
+# ThermoWell Sizer 1.1: manual de usuario
 
 ThermoWell Sizer dimensiona, verifica y ayuda a seleccionar termopozos (termovainas)
 según **ASME PTC 19.3 TW-2016**, y emite la hoja de datos, la memoria de cálculo y los
@@ -10,7 +10,7 @@ listados del proyecto.
 
 ## 1. Instalación
 
-1. Ejecute `ThermoWellSizer-1.0.0-setup.exe`. Puede instalar solo para su usuario (no
+1. Ejecute `ThermoWellSizer-1.1.0-setup.exe`. Puede instalar solo para su usuario (no
    pide permisos de administrador) o para todos los usuarios del equipo.
 2. Opcionalmente, cree el acceso directo en el escritorio y asocie los archivos `.tws`
    para abrir los proyectos con doble clic.
@@ -62,13 +62,17 @@ de cada reporte muestra «Licenciado a …».
 2. **Proyecto › Nuevo tag** (Ctrl+T). Complete los cinco pasos:
    1. *Identificación*: tag, servicio, línea o equipo, P&ID, ubicación.
    2. *Proceso*: fluido, presiones y temperaturas de operación y diseño, y uno o más
-      casos de flujo (mínimo, normal, máximo) por velocidad, caudal másico o
-      volumétrico. La densidad, la viscosidad y la fase se calculan solas (CoolProp o
-      tablas de la biblioteca); desmarque la casilla para cargarlas a mano.
+      casos de flujo (mínimo, normal, máximo) por velocidad, caudal másico,
+      volumétrico o **caudal estándar de gas** (Sm³/h a 15 °C y 101,325 kPa). La
+      densidad, la viscosidad, la fase y la densidad en condiciones estándar se calculan
+      solas (CoolProp o tablas de la biblioteca); desmarque la casilla para cargarlas a
+      mano.
    3. *Tubería*: NPS y schedule (el diámetro interno sale de ASME B36.10M/B36.19M) u
-      otro diámetro cargado a mano, y orientación.
+      otro diámetro cargado a mano, orientación, longitud de tobera y, opcionalmente, su
+      diámetro interno (para verificar que el vástago pase).
    4. *Termopozo*: perfil (recto, cónico, escalonado), dimensiones L, A, B, d, t, b, U,
-      material, conexión a proceso y recubrimiento.
+      material, conexión a proceso y recubrimiento. El botón **Diseño típico /
+      especificación…** completa las cotas solo (ver sección 4.1).
    5. *Sensor*: tipo (RTD o termopar) y diámetro de vaina.
 3. El cálculo corre solo medio segundo después de cada cambio; **F5** lo fuerza y
    **Shift+F5** calcula todos los tags.
@@ -84,6 +88,45 @@ de cada reporte muestra «Licenciado a …».
 Los campos fuera del alcance de la norma se marcan en rojo con el motivo. F1 abre la
 ayuda del paso visible.
 
+### 4.1 Diseños típicos y especificaciones de cliente
+
+En el paso *Termopozo*, **Diseño típico / especificación…** abre un diálogo con dos
+orígenes:
+
+- **Catálogo genérico**: ejecuciones habituales de la industria (roscadas recta, cónica
+  y escalonada; bridadas recta, cónica y escalonada; socket weld; para soldar; Van
+  Stone), agujero de 0,260" (6,6 mm) o 0,385" (9,8 mm), punta de 1/4" y largos U
+  normalizados de 2½" a 22½". El programa **recomienda el largo U** según el diámetro
+  interno y la tobera: el más corto que deja la punta al menos a 1/3 del diámetro (y unos
+  100 mm dentro del flujo si la línea lo permite) sin acercarse a la pared opuesta.
+- **Perfiles de cliente**: archivos JSON con los modelos normalizados de una
+  especificación de empresa. El programa elige el modelo según el tipo de conexión, el
+  NPS de la línea, el rating y el montaje (en codo o a 90°), y avisa si la línea es
+  chica o si el montaje no está permitido. Con **Importar perfil…** se copia el archivo
+  a la carpeta de datos del usuario; el formato está en `docs/perfiles-cliente.md` y
+  hay una plantilla en `ejemplos\perfil_ejemplo.json`.
+
+Al aplicar se cargan perfil, conexión, U = L, A, B, d, t, Ls y el tramo protegido L0
+(tobera). Son valores típicos: confirme las cotas con el plano del fabricante.
+
+### 4.2 Recomendaciones automáticas
+
+La pestaña **Recomendaciones** de los resultados complementa la verificación ASME con
+avisos de buena práctica, ordenados por gravedad:
+
+- velocidad erosiva (API RP 14E) y fluidos con sólidos;
+- inmersión insuficiente (largo sensible más 4 a 6 diámetros de punta), punta que toca o
+  queda cerca de la pared opuesta, tobera sin L0 cargado, vástago que no pasa por la
+  tobera;
+- huelgo entre sensor y agujero, sensor sin resorte, rango de temperatura del sensor,
+  vaina cerámica a muy alta temperatura, escala sugerida del termómetro bimetálico;
+- recubrimiento por encima de su temperatura, conexión roscada en servicio peligroso o
+  de alta presión, y presión de prueba hidráulica de referencia.
+
+Las mismas recomendaciones y una lista de **ensayos y documentación** (prueba
+hidrostática, END de soldaduras, PMI, certificados 3.1, NACE, control dimensional,
+marcado) salen en la hoja de datos y en la memoria de cálculo.
+
 ## 5. Unidades, idioma y presentación
 
 - **Herramientas › Unidades SI / imperiales** (Ctrl+U). Internamente todo se guarda en
@@ -96,8 +139,11 @@ ayuda del paso visible.
 
 ## 6. Biblioteca
 
-El menú **Biblioteca** abre materiales, fluidos, bridas y tuberías, glosario y fichas de
-normas. **Ctrl+K** busca en toda la biblioteca, sin distinguir acentos y tolerando
+El menú **Biblioteca** abre materiales, fluidos, bridas y tuberías, glosario, fichas de
+normas y **Referencias**: tipos de termopozo y cuándo usar cada uno, diseños típicos,
+buenas prácticas de instalación, guía de materiales por servicio, códigos de color de
+termopares (ANSI e IEC), tolerancias de termopares, clases y cableado de Pt100 y escalas
+de termómetros bimetálicos. **Ctrl+K** busca en toda la biblioteca, sin distinguir acentos y tolerando
 errores de tipeo.
 
 - **Asistente de material**: a partir de las condiciones del servicio (temperatura,
@@ -113,7 +159,8 @@ construcción. La memoria de cálculo lo indica junto a cada valor.
 
 ## 7. Herramientas
 
-- **Conversor de unidades**: 11 magnitudes, incluida presión absoluta/manométrica.
+- **Conversor de unidades**: 12 magnitudes, incluida presión absoluta/manométrica y
+  caudal de gas en condiciones estándar (Sm³/h, Nm³/h, SCFM, MSCFD, MMSCFD).
 - **Calculadoras**: velocidad en tubería, Reynolds y coeficiente de película, error por
   inmersión, constante de tiempo, RTD (IEC 60751), termopares (ITS-90), sobreespesor
   por corrosión y vida remanente.
@@ -126,7 +173,7 @@ aclaran.
 
 | Reporte | Formato | Contenido |
 |---|---|---|
-| Hoja de datos | PDF A4 | Formato tipo ISA-TR20 con rótulo, plano acotado y resultado. |
+| Hoja de datos | PDF A4 | Formato tipo ISA-TR20 con rótulo, plano acotado (U, L, A, B, d, t, rosca o brida, largo total), resultado, recomendaciones y ensayos. |
 | Memoria de cálculo | PDF A4 / Word | Índice, datos, ecuaciones, traza paso a paso, gráficas, conclusiones. |
 | Resultados | Excel | Una fila por tag con los resultados principales. |
 | Resumen del proyecto | PDF A4 | Tabla de todos los tags con su estado. |
@@ -149,7 +196,7 @@ Todos los reportes llevan el aviso de responsabilidad y la versión del programa
 |---|---|---|
 | `ejemplo_1_agua.tws` | Agua de refrigeración, 10 barg / 80 °C, 2 m/s; cónico 316, bridado 1½" 300# RF en línea de 6". | Cumple. |
 | `ejemplo_2_vapor.tws` | Vapor sobrecalentado 40 barg / 400 °C, 25 y 35 m/s; cónico corto F22, 600#, línea de 8" sch 80. | Cumple, con aviso de que el rating de la brida F22 (grupo 1.10) no está en la biblioteca y debe verificarse aparte. |
-| `ejemplo_3_gas_no_cumple.tws` | Gas natural 50 barg / 30 °C a 30 m/s; vástago largo y delgado (L = 400 mm) en línea de 12". | No cumple por frecuencia (resonancia). Use *Proponer alternativas* para ver geometrías que cumplen. |
+| `ejemplo_3_gas_no_cumple.tws` | Gas natural 50 barg / 30 °C a 30 m/s; vástago largo y delgado (L = 400 mm, tobera de 150 mm) en línea de 12". | No cumple por frecuencia (resonancia). Use *Proponer alternativas* para ver geometrías que cumplen. |
 
 ## 11. Atajos de teclado
 

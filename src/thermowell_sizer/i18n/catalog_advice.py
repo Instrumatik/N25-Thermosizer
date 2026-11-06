@@ -87,6 +87,44 @@ ADVICE_ES: Final[dict[str, str]] = {
         "Prueba hidráulica de referencia: {p} (1,5 × presión de diseño). Confirme la presión "
         "interna y externa con la especificación del proyecto."
     ),
+    "insp.title": "Ensayos y documentación",
+    "insp.hydro": (
+        "Prueba hidrostática a {p} (1,5 × presión de diseño): externa sobre el vástago y, en "
+        "bridados, también de la unión brida-vástago."
+    ),
+    "insp.weld_flange": (
+        "Soldadura brida-vástago a penetración completa, con tintas penetrantes y radiografía "
+        "o ultrasonido."
+    ),
+    "insp.weld_field": (
+        "Soldadura a la línea según ASME B31.3 (o B31.1), con procedimiento y soldador "
+        "calificados y tintas penetrantes."
+    ),
+    "insp.pmi": "Identificación positiva de material (PMI) del termopozo y de la brida.",
+    "insp.certificates": (
+        "Certificados de material EN 10204 3.1 con número de colada del termopozo y de la "
+        "brida."
+    ),
+    "insp.nace": (
+        "Certificado de cumplimiento NACE MR0175 / ISO 15156 (dureza y tratamiento térmico)."
+    ),
+    "insp.dimensional": (
+        "Control dimensional: agujero concéntrico, fondo con apoyo para el sensor y vástago "
+        "pulido (Ra ≤ 0,8 µm)."
+    ),
+    "insp.marking": (
+        "Marcado indeleble: tag {tag}, material, tamaño de conexión, rating y números de colada."
+    ),
+    "insp.calc_report": "Memoria de cálculo ASME PTC 19.3 TW firmada, incluida en la entrega.",
+    "insp.hydro_short": "Prueba hidrostática {p}",
+    "insp.weld_flange_short": "Soldadura a penetración completa + PT y RT/UT",
+    "insp.weld_field_short": "Soldadura a línea B31.3 + PT",
+    "insp.pmi_short": "PMI",
+    "insp.certificates_short": "Certificados EN 10204 3.1",
+    "insp.nace_short": "Certificado NACE MR0175",
+    "insp.dimensional_short": "Control dimensional, Ra ≤ 0,8 µm",
+    "insp.marking_short": "Marcado: tag, material, conexión, rating, colada",
+    "insp.calc_report_short": "Memoria ASME PTC 19.3 TW",
     "adv.title": "Advertencias y recomendaciones",
     "adv.level.critical": "Crítico",
     "adv.level.warning": "Advertencia",
@@ -175,6 +213,41 @@ ADVICE_EN: Final[dict[str, str]] = {
         "Reference hydrostatic test: {p} (1.5 × design pressure). Confirm internal and "
         "external test pressures with the project specification."
     ),
+    "insp.title": "Testing and documentation",
+    "insp.hydro": (
+        "Hydrostatic test at {p} (1.5 × design pressure): external on the shank and, on "
+        "flanged wells, also of the flange-to-shank joint."
+    ),
+    "insp.weld_flange": (
+        "Full-penetration flange-to-shank weld, with dye penetrant and radiographic or "
+        "ultrasonic examination."
+    ),
+    "insp.weld_field": (
+        "Weld to the line per ASME B31.3 (or B31.1), with qualified procedure and welder and "
+        "dye penetrant examination."
+    ),
+    "insp.pmi": "Positive material identification (PMI) of the thermowell and the flange.",
+    "insp.certificates": (
+        "EN 10204 3.1 material certificates with heat numbers of thermowell and flange."
+    ),
+    "insp.nace": "NACE MR0175 / ISO 15156 compliance certificate (hardness and heat treatment).",
+    "insp.dimensional": (
+        "Dimensional check: concentric bore, bottom seat for the sensor and polished shank "
+        "(Ra ≤ 0.8 µm)."
+    ),
+    "insp.marking": (
+        "Permanent marking: tag {tag}, material, connection size, rating and heat numbers."
+    ),
+    "insp.calc_report": "Signed ASME PTC 19.3 TW calculation report included in the delivery.",
+    "insp.hydro_short": "Hydrostatic test {p}",
+    "insp.weld_flange_short": "Full-penetration weld + PT and RT/UT",
+    "insp.weld_field_short": "Line weld per B31.3 + PT",
+    "insp.pmi_short": "PMI",
+    "insp.certificates_short": "EN 10204 3.1 certificates",
+    "insp.nace_short": "NACE MR0175 certificate",
+    "insp.dimensional_short": "Dimensional check, Ra ≤ 0.8 µm",
+    "insp.marking_short": "Marking: tag, material, connection, rating, heat",
+    "insp.calc_report_short": "ASME PTC 19.3 TW calculation report",
     "adv.title": "Warnings and recommendations",
     "adv.level.critical": "Critical",
     "adv.level.warning": "Warning",

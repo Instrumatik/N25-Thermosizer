@@ -275,3 +275,34 @@ def advise(inp: CalcInput, *, coating_max_temperature: float | None = None,
 
     order = {AdvisoryLevel.CRITICAL: 0, AdvisoryLevel.WARNING: 1, AdvisoryLevel.INFO: 2}
     return sorted(out, key=lambda a: order[a.level])
+
+
+# --- Ensayos y documentación ----------------------------------------------------------
+REF_INSPECTION: Final = "Buena práctica de compra e inspección de termopozos"
+
+
+def inspection_plan(inp: CalcInput) -> list[Advisory]:
+    """Ensayos, certificados y marcado sugeridos para la hoja de datos.
+
+    Es una lista de buena práctica que se adapta a la conexión y al servicio; la
+    especificación del proyecto manda.
+    """
+    proc = inp.process
+    conn = inp.thermowell.connection
+    design_gauge = max(proc.design_pressure - STANDARD_ATMOSPHERE_PA, 0.0)
+    out = [Advisory("insp.hydro", AdvisoryLevel.INFO, REF_INSPECTION,
+                    {"p": HYDRO_TEST_FACTOR * design_gauge + STANDARD_ATMOSPHERE_PA},
+                    {"p": QuantityKind.PRESSURE})]
+    if conn.type is ConnectionType.FLANGED:
+        out.append(Advisory("insp.weld_flange", AdvisoryLevel.INFO, REF_INSPECTION))
+    elif conn.type in (ConnectionType.WELD_IN, ConnectionType.SOCKET_WELD):
+        out.append(Advisory("insp.weld_field", AdvisoryLevel.INFO, REF_INSPECTION))
+    out.append(Advisory("insp.pmi", AdvisoryLevel.INFO, REF_INSPECTION))
+    out.append(Advisory("insp.certificates", AdvisoryLevel.INFO, REF_INSPECTION))
+    if proc.corrosion.nace_service or proc.corrosion.h2s_partial_pressure > 0:
+        out.append(Advisory("insp.nace", AdvisoryLevel.INFO, REF_INSPECTION))
+    out.append(Advisory("insp.dimensional", AdvisoryLevel.INFO, REF_INSPECTION))
+    out.append(Advisory("insp.marking", AdvisoryLevel.INFO, REF_INSPECTION,
+                        {"tag": inp.identification.tag}))
+    out.append(Advisory("insp.calc_report", AdvisoryLevel.INFO, REF_INSPECTION))
+    return out

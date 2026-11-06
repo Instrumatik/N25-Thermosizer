@@ -1,0 +1,31 @@
+{
+  "id": "ejemplo",
+  "name": "Perfil de ejemplo (plantilla)",
+  "description": "Plantilla para cargar la especificación de termopozos de una empresa: modelos normalizados y tabla de aplicación por NPS, rating y montaje. Los valores son ilustrativos.",
+  "private": false,
+  "default_bore_mm": 6.6,
+  "max_nps": "16",
+  "models": {
+    "F1": {"design": "flanged_tapered", "U_mm": 250, "size": "1-1/2"},
+    "F2": {"design": "flanged_tapered", "U_mm": 300, "size": "1-1/2"},
+    "F3": {"design": "flanged_tapered", "U_mm": 400, "size": "1-1/2", "A_mm": 27.0, "B_mm": 19.0,
+           "note": "Diámetros A y B propios de la especificación."},
+    "T1": {"design": "threaded_tapered", "U_mm": 115, "size": "3/4 NPT", "nozzle_mm": 50},
+    "T2": {"design": "threaded_tapered", "U_mm": 190, "size": "3/4 NPT", "nozzle_mm": 50}
+  },
+  "rules": [
+    {"connection": "flanged", "mounting": "perpendicular", "rating_min": 0, "rating_max": 600,
+     "by_nps": {"3": "F1", "6": "F1", "8": "F2", "12": "F3"}},
+    {"connection": "flanged", "mounting": "elbow", "rating_min": 0, "rating_max": 600,
+     "by_nps": {"2": "F1", "4": "F2", "8": "F3"}},
+    {"connection": "threaded", "mounting": "perpendicular",
+     "by_nps": {"2": null, "3": "T1", "6": "T2"}},
+    {"connection": "threaded", "mounting": "elbow",
+     "by_nps": {"2": "T1", "4": "T2"}}
+  ],
+  "nozzles": [
+    {"rating_max": 600, "length_mm": 150},
+    {"rating_max": 99999, "length_mm": 200}
+  ],
+  "notes": ["Copie este archivo, cambie id y name, y complete los modelos de su especificación."]
+}

@@ -27,7 +27,14 @@ from thermowell_sizer.core.models import CheckStatus
 from thermowell_sizer.core.trace import TraceEntry
 from thermowell_sizer.core.units import QuantityKind
 from thermowell_sizer.reports.charts import sensitivity_png
-from thermowell_sizer.reports.common import STATUS_RGB, Fmt, TagReport, short_ref
+from thermowell_sizer.reports.common import (
+    STATUS_RGB,
+    Fmt,
+    TagReport,
+    advisory_lines,
+    inspection_lines,
+    short_ref,
+)
 from thermowell_sizer.reports.datasheet import calc_rows, sections
 from thermowell_sizer.reports.drawing import thermowell_drawing
 from thermowell_sizer.reports.mathrender import plain, render_png
@@ -237,6 +244,15 @@ def build_memo(rep: TagReport, path: Path) -> Path:
                           [_p(f.t("imm_min")), _p(f.q(th.min_immersion, QuantityKind.LENGTH))],
                           [_p(f.t("tau")), _p(f"{f.num(th.tau, 1)} s / {f.num(th.t90, 1)} s")]],
                          [70 * mm, BODY_W - 70 * mm], header=False)]
+
+    advice = advisory_lines(rep)
+    if advice:
+        story.append(_p(f.t("adv.title"), "h1"))
+        story.append(_table([[_p(f.t(f"adv.level.{level.value}")), _p(text)]
+                             for level, text in advice], [30 * mm, BODY_W - 30 * mm],
+                            header=False))
+    story.append(_p(f.t("insp.title"), "h1"))
+    story += [_p(f"☐ {text}", "body") for text in inspection_lines(rep)]
 
     notes = [f.t(w) for w in ev.warnings]
     if res is not None:

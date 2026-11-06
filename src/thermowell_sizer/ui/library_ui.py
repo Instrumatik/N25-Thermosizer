@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from html import escape
+
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QBrush, QColor, QKeyEvent
 from PySide6.QtWidgets import (
@@ -29,6 +31,8 @@ from PySide6.QtWidgets import (
 from thermowell_sizer.core.units import QuantityKind
 from thermowell_sizer.data import seed_tables
 from thermowell_sizer.data.database import Library, MaterialInfo
+from thermowell_sizer.data.reference import REFERENCE_TABLES, RefTable
+from thermowell_sizer.data.reference import text as ref_text
 from thermowell_sizer.data.selection import (
     MaterialEvaluation,
     ServiceConditions,
@@ -96,6 +100,7 @@ class LibraryWindow(QWidget):
         self.tabs.addTab(self._pipes(), "B36.10M")
         self.tabs.addTab(self._glossary(), t("act.glossary"))
         self.tabs.addTab(self._standards(), t("act.standards"))
+        self.tabs.addTab(self._references(), t("lib.references"))
         note = QLabel("⚠ " + t("lib.unverified"))
         note.setObjectName("warningLabel")
         lay = QVBoxLayout(self)
@@ -261,6 +266,26 @@ class LibraryWindow(QWidget):
         split.setSizes([300, 660])
         return split
 
+    def _references(self) -> QWidget:
+        split = QSplitter()
+        self.ref_list = QListWidget()
+        self.ref_view = QTextBrowser()
+        for table in REFERENCE_TABLES:
+            item = QListWidgetItem(ref_text(table.title, _es()))
+            item.setData(Qt.ItemDataRole.UserRole, table.id)
+            self.ref_list.addItem(item)
+
+        def show(row: int) -> None:
+            if 0 <= row < len(REFERENCE_TABLES):
+                self.ref_view.setHtml(reference_html(REFERENCE_TABLES[row], _es()))
+
+        self.ref_list.currentRowChanged.connect(show)
+        self.ref_list.setCurrentRow(0)
+        split.addWidget(self.ref_list)
+        split.addWidget(self.ref_view)
+        split.setSizes([260, 700])
+        return split
+
     def _standards(self) -> QWidget:
         split = QSplitter()
         self.std_list = QListWidget()
@@ -282,6 +307,16 @@ class LibraryWindow(QWidget):
         split.addWidget(self.std_view)
         split.setSizes([300, 660])
         return split
+
+
+def reference_html(table: RefTable, es: bool) -> str:
+    """Tabla de referencia como HTML para el visor."""
+    head = "".join(f"<th align='left'>{escape(ref_text(h, es))}</th>" for h in table.headers)
+    body = "".join("<tr>" + "".join(f"<td>{escape(ref_text(c, es))}</td>" for c in row) + "</tr>"
+                   for row in table.rows)
+    return (f"<h3>{escape(ref_text(table.title, es))}</h3>"
+            f"<table border='1' cellspacing='0' cellpadding='4'><tr>{head}</tr>{body}</table>"
+            f"<p><i>{escape(ref_text(table.note, es))}</i></p>")
 
 
 class SearchPalette(QDialog):

@@ -145,6 +145,75 @@ GLOSSARY: Final[tuple[tuple[str, str, str, str, str, str, str], ...]] = (
      "Termorresistencia de platino de 100 Ω a 0 °C según IEC 60751.",
      "Platinum resistance thermometer of 100 Ω at 0 °C per IEC 60751.",
      r"R(T) = R_0(1 + AT + BT^2)", ""),
+    ("threaded_well", "Termopozo roscado", "Threaded thermowell",
+     "Termopozo que se enrosca en un acople (thredolet o cupla) con rosca cónica NPT. "
+     "Económico y fácil de desmontar, pero la rosca es un camino de fuga: se limita a "
+     "servicios no peligrosos y presiones moderadas.",
+     "Thermowell screwed into a coupling or thredolet with an NPT taper thread. Low cost and "
+     "easy to remove, but the thread is a leak path: limited to non-hazardous service.",
+     "", "geometry"),
+    ("flanged_well", "Termopozo bridado", "Flanged thermowell",
+     "Vástago soldado a penetración completa a una brida (o mecanizado de una pieza) que se "
+     "monta en una tobera bridada. Es la ejecución más usada en plantas de proceso.",
+     "Shank full-penetration welded to a flange (or machined in one piece) mounted on a "
+     "flanged nozzle. The most common design in process plants.", "", "geometry"),
+    ("socket_weld_well", "Termopozo socket weld", "Socket-weld thermowell",
+     "Termopozo con cuerpo que se inserta y suelda en un encastre (socket) de la línea; no "
+     "tiene camino de fuga y soporta alta presión, pero es permanente.",
+     "Thermowell whose body is inserted and fillet welded into a socket; no leak path and "
+     "high pressure capability, but permanent.", "", "geometry"),
+    ("weld_in_well", "Termopozo para soldar (weld-in)", "Weld-in thermowell",
+     "Termopozo que se suelda directamente a la cañería o a un weldolet. Es el más robusto "
+     "y se usa en vapor y gas a alta velocidad y presión.",
+     "Thermowell welded directly to the pipe or a weldolet. The sturdiest design, used for "
+     "high-velocity, high-pressure steam and gas.", "", "geometry"),
+    ("van_stone", "Termopozo Van Stone", "Van Stone thermowell",
+     "Termopozo con un collar que hace de cara de junta y se aprieta con una brida loca "
+     "(lap joint). Solo el termopozo es de la aleación resistente: ahorra en servicios "
+     "corrosivos.",
+     "Thermowell with a collar acting as the gasket face, clamped by a lap-joint flange. Only "
+     "the thermowell is made of the resistant alloy: saves cost in corrosive service.", "",
+     "geometry"),
+    ("skin_point", "Termopar de piel (skin point)", "Skin-point thermocouple",
+     "Termopar soldado o fijado a la superficie exterior de un tubo u horno para medir la "
+     "temperatura de pared sin termopozo.",
+     "Thermocouple welded or clamped to the outside of a tube or furnace to measure wall "
+     "temperature without a thermowell.", "", ""),
+    ("ceramic_sheath", "Vaina cerámica", "Ceramic sheath",
+     "Protección de alúmina o carburo de silicio para temperaturas muy altas (más de "
+     "1100 °C), llama directa o atmósferas reductoras, típica con termopares R, S o B.",
+     "Alumina or silicon carbide protection tube for very high temperature (above 1100 °C), "
+     "direct flame or reducing atmospheres, typical with R, S or B thermocouples.", "", ""),
+    ("hydro_test", "Prueba hidrostática", "Hydrostatic test",
+     "Ensayo con agua a una presión mayor que la de diseño (habitualmente 1,5 veces) para "
+     "verificar la resistencia y la estanqueidad del termopozo y sus uniones.",
+     "Water test above design pressure (usually 1.5 times) to verify strength and tightness "
+     "of the thermowell and its joints.", r"P_{test} = 1.5\,P_{design}", ""),
+    ("pmi", "PMI (identificación positiva de material)", "PMI (positive material "
+     "identification)",
+     "Verificación de la composición química del material terminado, por fluorescencia de "
+     "rayos X u otro método, para evitar mezclas de materiales.",
+     "Check of the finished part's chemical composition, by X-ray fluorescence or similar, "
+     "to avoid material mix-ups.", "", ""),
+    ("erosional_velocity", "Velocidad erosiva (Ve)", "Erosional velocity (Ve)",
+     "Velocidad por encima de la cual la erosión del fluido se vuelve significativa. El "
+     "criterio de API RP 14E la estima con una constante empírica C (100 a 150 en servicio "
+     "continuo) y la densidad.",
+     "Velocity above which fluid erosion becomes significant. The API RP 14E criterion "
+     "estimates it from an empirical constant C (100 to 150 for continuous service) and "
+     "density.", r"V_e = \frac{1.22\,C}{\sqrt{\rho}}", ""),
+    ("standard_flow", "Caudal estándar (Sm³, Nm³, SCF)", "Standard flow (Sm³, Nm³, SCF)",
+     "Caudal de gas referido a condiciones de referencia: estándar 15 °C y 101,325 kPa (Sm³), "
+     "normal 0 °C y 101,325 kPa (Nm³) o 60 °F y 14,696 psia (SCF). El programa lo convierte a "
+     "caudal másico con la densidad en condiciones estándar.",
+     "Gas flow referred to reference conditions: standard 15 °C and 101.325 kPa (Sm³), normal "
+     "0 °C and 101.325 kPa (Nm³) or 60 °F and 14.696 psia (SCF). The program converts it to "
+     "mass flow using the standard density.", r"\dot m = Q_{std}\,\rho_{std}", ""),
+    ("bimetallic", "Termómetro bimetálico", "Bimetallic thermometer",
+     "Indicador local con un espiral de dos metales de distinta dilatación que mueve la "
+     "aguja. Se elige la escala para que la operación quede en el tercio central.",
+     "Local indicator with a coil of two metals of different expansion driving the pointer. "
+     "The scale is chosen so operation falls in the middle third.", "", ""),
     ("thermocouple", "Termopar", "Thermocouple",
      "Sensor formado por dos metales distintos que genera una tensión según la diferencia "
      "de temperatura (IEC 60584).",

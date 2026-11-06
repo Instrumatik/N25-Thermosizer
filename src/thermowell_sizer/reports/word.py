@@ -11,7 +11,7 @@ from docx.shared import Mm, Pt, RGBColor
 
 from thermowell_sizer.core.units import QuantityKind
 from thermowell_sizer.reports.charts import sensitivity_png
-from thermowell_sizer.reports.common import TagReport, short_ref
+from thermowell_sizer.reports.common import TagReport, advisory_lines, inspection_lines, short_ref
 from thermowell_sizer.reports.datasheet import calc_rows, sections
 from thermowell_sizer.reports.mathrender import plain, render_png
 from thermowell_sizer.reports.pdfbase import logo_path
@@ -103,6 +103,13 @@ def build_word(rep: TagReport, path: Path) -> Path:
                   (f.t("imm_err"), f.q(abs(th.immersion_error),
                                        QuantityKind.TEMPERATURE_DIFFERENCE)),
                   (f.t("tau"), f"{f.num(th.tau, 1)} s / {f.num(th.t90, 1)} s")])
+    advice = advisory_lines(rep)
+    if advice:
+        doc.add_heading(f.t("adv.title"), 1)
+        _kv(doc, [(f.t(f"adv.level.{level.value}"), text) for level, text in advice])
+    doc.add_heading(f.t("insp.title"), 1)
+    for text in inspection_lines(rep):
+        doc.add_paragraph(text, style="List Bullet")
     doc.add_paragraph(f.disclaimer).runs[0].bold = True
     doc.save(str(path))
     return path
