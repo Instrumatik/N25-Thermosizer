@@ -83,6 +83,7 @@ LABELS: Final[dict[str, tuple[str, str]]] = {
     "src.library": ("Biblioteca de materiales", "Material library"),
     "src.manual": ("Cargado a mano", "Entered by hand"),
     "src.missing": ("No cargado", "Not entered"),
+    "src.auto": ("Automático (selección del programa)", "Automatic (program selection)"),
     "use.asme": ("Sí", "Yes"),
     "use.advice": ("Solo recomendaciones", "Recommendations only"),
     "use.info": ("Informativo", "Informative"),
@@ -298,6 +299,10 @@ def input_rows(ev: Evaluation, auto_properties: bool) -> list[InputRow]:
     mat = ev.material
     e_src = "src.manual" if ref.elastic_modulus is not None else "src.library"
     s_src = "src.manual" if ref.allowable_stress is not None else "src.library"
+    auto = set(ev.auto_blocks)
+    if "material" in auto:
+        e_src = s_src = "src.auto"
+    geo_src = "src.auto" if "geometry" in auto else "src.entered"
     return [
         InputRow("in.flow", flow, flow_kind, "src.entered", "use.asme"),
         InputRow("in.pressure", proc.operating_pressure, Q.PRESSURE, "src.entered",
@@ -309,16 +314,16 @@ def input_rows(ev: Evaluation, auto_properties: bool) -> list[InputRow]:
                  prop_src, "use.asme"),
         InputRow("in.pipe_id", pipe.inner_diameter, Q.DIAMETER, pipe_src, "use.asme"),
         InputRow("in.insertion", max(u - hs, 0.0), Q.LENGTH, "src.calculated", "use.info"),
-        InputRow("in.unsupported", u, Q.LENGTH, "src.entered", "use.asme"),
+        InputRow("in.unsupported", u, Q.LENGTH, geo_src, "use.asme"),
         InputRow("in.hs", hs, Q.LENGTH,
                  "src.entered" if pipe.mount_height is not None else "src.calculated",
                  "use.advice"),
         InputRow("in.nozzle_id", pipe.nozzle_inner_diameter, Q.DIAMETER,
                  "src.entered" if pipe.nozzle_inner_diameter else "src.missing",
                  "use.advice"),
-        InputRow("in.root", g.A, Q.DIAMETER, "src.entered", "use.asme"),
-        InputRow("in.tip", g.B, Q.DIAMETER, "src.entered", "use.asme"),
-        InputRow("in.bore", g.d, Q.DIAMETER, "src.entered", "use.asme"),
+        InputRow("in.root", g.A, Q.DIAMETER, geo_src, "use.asme"),
+        InputRow("in.tip", g.B, Q.DIAMETER, geo_src, "use.asme"),
+        InputRow("in.bore", g.d, Q.DIAMETER, geo_src, "use.asme"),
         InputRow("in.E", mat.elastic_modulus if mat else ref.elastic_modulus,
                  Q.ELASTIC_MODULUS, e_src, "use.asme"),
         InputRow("in.S", mat.allowable_stress if mat else ref.allowable_stress, Q.STRESS,
@@ -363,3 +368,38 @@ def limit_text(row: ResultRow, qfmt: Callable[[float, Q], str],
     if row.limit is None:
         return "—"
     return f"{row.limit_prefix} {value_text(row.key, row.limit, row.kind, qfmt, nfmt)}"
+
+
+@dataclass(frozen=True, slots=True)
+class AutoRow:
+    """Una fila de «Selección automática y justificación»."""
+
+    block: str
+    item: str
+    value: str
+    reason: str
+    alternatives: str
+
+
+def auto_rows(ev: Evaluation, es: bool, qfmt: Callable[[float, Q], str]) -> list[AutoRow]:
+    """Decisiones de la selección automática, listas para tablas (pantalla y reportes)."""
+    from thermowell_sizer.autodesign import BLOCK_NAMES
+    from thermowell_sizer.ui.text import UI  # textos compartidos con la interfaz
+
+    lang = 0 if es else 1
+    out: list[AutoRow] = []
+    for d in ev.decisions:
+        block = BLOCK_NAMES.get(d.block, (d.block, d.block))[lang]
+        item = UI.get(d.field, (d.field, d.field))[lang]
+        out.append(AutoRow(block, item, d.shown(es, qfmt), d.text(es),
+                           d.alternatives[lang]))
+    return out
+
+
+def auto_note(es: bool) -> str:
+    """Advertencia que acompaña a toda selección automática."""
+    return ("Recomendaciones orientativas del programa a partir de la biblioteca y de los "
+            "resultados; deben ser revisadas por un ingeniero calificado antes de su uso."
+            if es else "Program guidance based on the library and the results; it must be "
+            "reviewed by a qualified engineer before use.")
+

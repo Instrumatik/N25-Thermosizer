@@ -1,4 +1,4 @@
-# ThermoWell Sizer 1.1: manual de usuario
+# ThermoWell Sizer 1.3: manual de usuario
 
 ThermoWell Sizer dimensiona, verifica y ayuda a seleccionar termopozos (termovainas)
 según **ASME PTC 19.3 TW-2016**, y emite la hoja de datos, la memoria de cálculo y los
@@ -10,7 +10,7 @@ listados del proyecto.
 
 ## 1. Instalación
 
-1. Ejecute `ThermoWellSizer-1.2.0-setup.exe`. Puede instalar solo para su usuario (no
+1. Ejecute `ThermoWellSizer-1.3.0-setup.exe`. Puede instalar solo para su usuario (no
    pide permisos de administrador) o para todos los usuarios del equipo.
 2. Opcionalmente, cree el acceso directo en el escritorio y asocie los archivos `.tws`
    para abrir los proyectos con doble clic.
@@ -149,6 +149,32 @@ Las mismas recomendaciones y una lista de **ensayos y documentación** (prueba
 hidrostática, END de soldaduras, PMI, certificados 3.1, NACE, control dimensional,
 marcado) salen en la hoja de datos y en la memoria de cálculo.
 
+### 4.3 Selección automática por bloque (manual / automático)
+
+Arriba del paso *Termopozo* (y al comienzo del paso *Sensor*) cada bloque de datos tiene
+un selector **Manual / Automático**:
+
+| Bloque | En automático el programa elige | Criterio resumido |
+|---|---|---|
+| Propiedades del fluido | ρ, μ y fase | CoolProp o biblioteca a P y T de operación (casilla «Calcular ρ y μ»). |
+| Tubería | DI y espesor de pared | Tabla ASME B36.10M / B36.19M según NPS y schedule. |
+| Material y protecciones | material, alternativas, recubrimiento y sobreespesor de corrosión | Matriz de selección de la biblioteca a la temperatura de diseño con H₂S, cloruros, pH y sólidos; se prefiere 316/316L entre los aptos. Recargue duro si hay sólidos o V/V_e ≥ 0,7; 1 mm de sobreespesor en servicio agresivo. |
+| Conexión | tipo, tamaño, clase y cara | Roscada solo en utilidades (agua, aire, nitrógeno) ≤ 20 barg y ≤ 200 °C; soldada desde clase 1500; bridada en el resto. Clase B16.5 mínima para la presión de diseño y el grupo del material; RF hasta 600, RTJ desde 900. |
+| Geometría | perfil, U, A, B, d, L0 | Se prueban diseños típicos (cónico, escalonado, recto) y largos normalizados con la verificación ASME hasta que cumple, cuidando la inmersión de la parte sensible y que el vástago entre en la conexión de montaje. Si nada cumple, se muestra el de mejor margen con un aviso. |
+| Sensor | diámetro de vaina | 6 mm para agujero 0,260" y 8 mm para 0,385", con resorte. |
+
+Siempre los carga usted: condiciones de proceso (P y T de operación y de diseño), tipo de
+fluido y fluido, casos de flujo, H₂S, cloruros, pH y sólidos si aplican, NPS, schedule, Hs y
+el diámetro interno de la conexión de montaje.
+
+Los campos de un bloque automático quedan en gris y se completan al calcular. Cada valor
+elegido aparece con su justificación en la pestaña **Resumen ASME**, en la página 2 de la
+hoja de datos y en la sección **4. Selección automática y justificación** de la memoria; en
+la tabla de datos de entrada su origen figura como «Automático». La elección se guarda en el
+proyecto. Para fijar un valor a mano, vuelva el bloque a «Manual»: el editor conserva lo
+último calculado. Las recomendaciones son orientativas y deben ser revisadas por un
+ingeniero calificado.
+
 ## 5. Unidades, idioma y presentación
 
 - **Herramientas › Unidades SI / imperiales** (Ctrl+U). Internamente todo se guarda en
@@ -196,7 +222,7 @@ aclaran.
 | Reporte | Formato | Contenido |
 |---|---|---|
 | Hoja de datos | PDF A4 | Formato tipo ISA-TR20 con rótulo, plano acotado (U, L, A, B, d, t, rosca o brida, largo total), resultado, recomendaciones y ensayos. |
-| Memoria de cálculo | PDF A4 / Word | Índice, datos, ecuaciones, traza paso a paso, gráficas, conclusiones. |
+| Memoria de cálculo | PDF A4 / Word | Índice, resumen de la verificación, datos, selección automática y justificación, ecuaciones, traza paso a paso, gráficas, conclusiones. |
 | Resultados | Excel | Una fila por tag con los resultados principales. |
 | Resumen del proyecto | PDF A4 | Tabla de todos los tags con su estado. |
 | Lista de materiales | Excel | Cantidades por material, perfil y conexión. |

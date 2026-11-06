@@ -170,6 +170,7 @@ class TagEditor(QWidget):
         self._base: CalcInput | None = None
         self.quantities: dict[str, QuantityEdit] = {}
         self.flow_rows: list[FlowCaseRow] = []
+        self.mode_combos: dict[str, QComboBox] = {}
         self.pages = [self._page_identification(), self._page_process(), self._page_pipe(),
                       self._page_thermowell(), self._page_sensor()]
         self.info_keys: list[str] = []
@@ -361,9 +362,27 @@ class TagEditor(QWidget):
                                             optional=True))
         return _top(box)
 
+    def _mode_combo(self, block: str) -> QComboBox:
+        combo = QComboBox()
+        combo.addItem(t("mode.manual"), False)
+        combo.addItem(t("mode.auto"), True)
+        combo.currentIndexChanged.connect(self._emit)
+        self.mode_combos[block] = combo
+        return combo
+
     def _page_thermowell(self) -> QWidget:
         page = QWidget()
         lay = QVBoxLayout(page)
+        modes = QGroupBox(t("f.auto_select"))
+        mf = _form(modes)
+        mf.addRow(t("f.mode_material"), self._mode_combo("material"))
+        mf.addRow(t("f.mode_connection"), self._mode_combo("connection"))
+        mf.addRow(t("f.mode_geometry"), self._mode_combo("geometry"))
+        hint = QLabel(t("mode.auto_hint"))
+        hint.setWordWrap(True)
+        hint.setObjectName("hintLabel")
+        mf.addRow("", hint)
+        lay.addWidget(modes)
         left = QGroupBox(t("step.thermowell"))
         f = _form(left)
         self.c_profile = EnumCombo(list(ShankProfile))
@@ -434,6 +453,7 @@ class TagEditor(QWidget):
     def _page_sensor(self) -> QWidget:
         box = QGroupBox(t("step.sensor"))
         f = _form(box)
+        f.addRow(t("f.mode_sensor"), self._mode_combo("sensor"))
         self.c_sensor = EnumCombo(list(SensorType))
         self.c_sensor.currentIndexChanged.connect(self._emit)
         f.addRow(t("f.sensor_type"), self.c_sensor)
@@ -592,6 +612,9 @@ class TagEditor(QWidget):
             self.l_u_breakdown.setText(text.split("\n")[-1] if u else "")
 
     def _update_enabled(self) -> None:
+        for widgets in self._block_widgets().values():
+            for w in widgets:
+                w.setEnabled(True)
         auto = self.chk_auto.isChecked()
         self.quantities["density"].setEnabled(not auto)
         self.quantities["viscosity"].setEnabled(not auto)
@@ -606,6 +629,7 @@ class TagEditor(QWidget):
                                                            ConnectionType.VAN_STONE)
         self.c_rating.setEnabled(flanged)
         self.c_face.setEnabled(flanged)
+        self._apply_modes()
         custom = self.c_nps.currentText() == CUSTOM_PIPE
         for key in ("pipe_id", "pipe_od", "wall"):
             self.quantities[key].setEnabled(custom)
@@ -614,6 +638,35 @@ class TagEditor(QWidget):
         self.btn_add_case.setEnabled(len(self.flow_rows) < MAX_FLOW_CASES)
         for row in self.flow_rows:
             row.btn_remove.setEnabled(len(self.flow_rows) > 1)
+
+    def auto_blocks(self) -> tuple[str, ...]:
+        """Bloques en «Automático», en el orden del motor."""
+        return tuple(b for b in ("material", "connection", "geometry", "sensor")
+                     if b in self.mode_combos and self.mode_combos[b].currentData())
+
+    def _block_widgets(self) -> dict[str, list[QWidget]]:
+        q = self.quantities
+        return {
+            "material": [self.c_material, self.c_coating, q["mat_E"], q["mat_S"], q["g_ca"]],
+            "connection": [self.c_conn, self.e_conn_size, self.c_rating, self.c_face],
+            "geometry": [self.c_profile, self.btn_design,
+                         *(q[f"g_{k}"] for k in ("L", "U", "A", "B", "d", "t", "b", "Ls", "bs",
+                                                 "T_lag", "L0"))],
+            "sensor": [q["sheath"], self.chk_spring],
+        }
+
+    def _apply_modes(self) -> None:
+        """Deshabilita los campos de los bloques automáticos (los completa el cálculo)."""
+        auto = set(self.auto_blocks())
+        for block, widgets in self._block_widgets().items():
+            if block in auto:
+                for w in widgets:
+                    w.setEnabled(False)
+
+    def show_auto(self, inp: CalcInput) -> None:
+        """Muestra los valores que completó la selección automática."""
+        self.load(inp, auto_properties=self.chk_auto.isChecked(),
+                  auto_blocks=self.auto_blocks())
 
     def _add_case(self, *, emit: bool) -> FlowCaseRow:
         row = FlowCaseRow()
@@ -672,9 +725,12 @@ class TagEditor(QWidget):
         self.validate()
 
     # --- Carga y lectura del modelo ---------------------------------------------------
-    def load(self, inp: CalcInput, *, auto_properties: bool = True) -> None:
+    def load(self, inp: CalcInput, *, auto_properties: bool = True,
+             auto_blocks: tuple[str, ...] = ()) -> None:
         """Muestra los datos de ``inp`` en el formulario."""
         self._loading = True
+        for block, combo in self.mode_combos.items():
+            combo.setCurrentIndex(1 if block in auto_blocks else 0)
         self._base = inp
         q = self.quantities
         idn, proc, pipe = inp.identification, inp.process, inp.pipe

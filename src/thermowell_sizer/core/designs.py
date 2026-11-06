@@ -75,7 +75,7 @@ TYPICAL_DESIGNS: Final[tuple[TypicalDesign, ...]] = (
                   rating_required=True),
     TypicalDesign("flanged_stepped", ShankProfile.STEPPED, ConnectionType.FLANGED,
                   ("1-1/2", "2"),
-                  {BORE_260: _inch(1.0, 0.625)}, min_u=4.5 * INCH, rating_required=True),
+                  {BORE_260: _inch(1.25, 0.875)}, min_u=4.5 * INCH, rating_required=True),
     TypicalDesign("socket_tapered", ShankProfile.TAPERED, ConnectionType.SOCKET_WELD,
                   ("3/4", "1", "1-1/4", "1-1/2"),
                   {BORE_260: _inch(0.875, 0.625), BORE_385: _inch(1.0, 0.75)}),

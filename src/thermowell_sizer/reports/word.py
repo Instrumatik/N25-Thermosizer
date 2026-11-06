@@ -19,6 +19,8 @@ from thermowell_sizer.reports.overview import formatters
 from thermowell_sizer.reports.pdfbase import logo_path
 from thermowell_sizer.summary import (
     asme_status,
+    auto_note,
+    auto_rows,
     calculated_results,
     input_rows,
     label,
@@ -65,6 +67,18 @@ def build_word(rep: TagReport, path: Path) -> Path:
     for title, rows in sections(rep):
         doc.add_heading(title, 2)
         _kv(doc, rows)
+    doc.add_heading(f.t("m.auto"), 1)
+    es = f.lang is Language.ES
+    autos = auto_rows(ev, es, formatters(rep)[0])
+    if autos:
+        doc.add_paragraph(f.t("m.auto_text"))
+        _grid(doc, [f.t("res.auto_field"), f.t("res.auto_value"), f.t("res.auto_reason")],
+              [[f"{a.block} · {a.item}", a.value, a.reason + (
+                  f" {f.t('res.auto_alt')}: {a.alternatives}." if a.alternatives else "")]
+               for a in autos])
+        doc.add_paragraph(auto_note(es))
+    else:
+        doc.add_paragraph(f.t("m.auto_none"))
     res = ev.result
     if res is not None:
         doc.add_heading(f.t("m.summary"), 1)

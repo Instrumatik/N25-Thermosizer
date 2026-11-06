@@ -65,6 +65,9 @@ class TagRecord(_Model):
     auto_properties: bool = Field(
         default=True, description="Recalcular ρ y μ con CoolProp al cambiar P o T"
     )
+    auto_blocks: tuple[str, ...] = Field(
+        default=(), description="Bloques en modo automático: material, connection, geometry, "
+                                "sensor")
     last_status: CheckStatus | None = None
     notes: str = ""
 

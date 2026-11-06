@@ -1,5 +1,29 @@
 # Cambios
 
+## 1.3.0 (2026-11-06)
+
+Revisión del usuario sobre la versión 1.2.0.
+
+- **Selección automática por bloque**: selector Manual / Automático para material y
+  protecciones, conexión, geometría y vaina del sensor (las propiedades del fluido y la
+  tubería ya se calculaban). Con los datos de proceso, fluido, casos de flujo, servicio
+  corrosivo, NPS, schedule, Hs y DI de la conexión de montaje, el programa recomienda
+  material (con alternativas), recubrimiento, sobreespesor, tipo, tamaño, clase y cara de
+  la conexión, perfil y cotas (iterando con la verificación ASME hasta que cumple) y la
+  vaina del sensor. La elección por bloque se guarda en el proyecto.
+- **Justificación** de cada valor automático en la pestaña Resumen ASME, en la página 2
+  de la hoja de datos y en la nueva sección «4. Selección automática y justificación» de
+  la memoria PDF y Word (las secciones siguientes pasan a 5–12). En la tabla de datos de
+  entrada el origen puede ser cargado, calculado o automático.
+- Fichas ⓘ de los selectores nuevos y de la sección de justificación.
+- Diseño típico bridado escalonado corregido a punta de 7/8" (la correlación de la norma
+  solo admite 1/2" y 7/8").
+- Resultados calculados en tablas de hasta tres casos; la hoja de datos muestra los casos
+  base y remite a la memoria para las variantes con sobreespesor consumido.
+- **Logo THWS** (termopozo negro como «T» y «HWS» en azul) en reportes, ventana, barra
+  de tareas, Acerca de, Licencia, instalador y archivos .tws; el .ico usa solo el
+  termopozo de 16 a 48 px. `tools/make_icons.py` regenera todo desde el logo maestro.
+
 ## 1.2.0 (2026-11-06)
 
 Revisión del usuario sobre la versión 1.1.0.

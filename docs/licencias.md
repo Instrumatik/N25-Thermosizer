@@ -52,7 +52,7 @@ crear una etiqueta `v*` o a mano (*Actions › Release Windows › Run workflow*
 
 Para hacerlo en un equipo Windows propio: `pip install ".[gui,reports]" pyinstaller`,
 `pyinstaller packaging/thermowell_sizer.spec --noconfirm` y luego
-`iscc /DAppVersion=1.2.0 packaging\installer.iss`.
+`iscc /DAppVersion=1.3.0 packaging\installer.iss`.
 
 ## Antes de vender a terceros
 

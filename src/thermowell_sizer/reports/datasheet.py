@@ -21,6 +21,7 @@ from thermowell_sizer.core.advisories import AdvisoryLevel
 from thermowell_sizer.core.analysis.sensitivity import max_allowable_velocity
 from thermowell_sizer.core.models import CheckStatus, ConnectionType
 from thermowell_sizer.core.units import QuantityKind
+from thermowell_sizer.i18n import Language
 from thermowell_sizer.reports.common import (
     STATUS_RGB,
     TagReport,
@@ -28,7 +29,12 @@ from thermowell_sizer.reports.common import (
     inspection_lines,
 )
 from thermowell_sizer.reports.drawing import thermowell_drawing
-from thermowell_sizer.reports.overview import convention_table, results_table, status_table
+from thermowell_sizer.reports.overview import (
+    auto_table,
+    convention_table,
+    results_tables,
+    status_table,
+)
 from thermowell_sizer.reports.pdfbase import (
     FONT,
     FONT_BOLD,
@@ -44,6 +50,7 @@ from thermowell_sizer.reports.pdfbase import (
     footer,
     title_block,
 )
+from thermowell_sizer.summary import auto_note, calculated_results
 
 LEFT_W = 112 * mm
 RIGHT_W = PAGE_W - 2 * MARGIN - LEFT_W - 3 * mm
@@ -292,9 +299,15 @@ def build_datasheet(rep: TagReport, path: Path) -> Path:
                                              ("RIGHTPADDING", (0, 0), (-1, -1), 0)])))
     else:
         story.append(conv_t)
-    results_t = results_table(rep, full_w)
-    if results_t is not None:
+    for results_t in results_tables(rep, full_w, base_only=True):
         story += [Spacer(1, 3 * mm), results_t]
+    if any("|" in c.scope for c in calculated_results(rep.evaluation)):
+        story.append(Paragraph(escape(f.t("ds.corr_cases")), STYLES["small"]))
+    auto_t = auto_table(rep, full_w, compact=True)
+    if auto_t is not None:
+        story += [Spacer(1, 3 * mm), Paragraph(f"<b>{f.t('res.auto_title')}</b>",
+                                               STYLES["body"]), auto_t,
+                  Paragraph(escape(auto_note(f.lang is Language.ES)), STYLES["small"])]
     advice = advisory_lines(rep)
     if advice:
         story += [Spacer(1, 3 * mm), Paragraph(f"<b>{f.t('adv.title')}</b>", STYLES["body"])]

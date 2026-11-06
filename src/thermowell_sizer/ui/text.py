@@ -131,6 +131,26 @@ UI: Final[dict[str, tuple[str, str]]] = {
     "f.auto_props": ("Calcular ρ y μ con CoolProp / biblioteca",
                      "Compute ρ and μ with CoolProp / library"),
     "f.density": ("Densidad", "Density"),
+    "f.auto_select": ("Selección de datos (manual / automática)",
+                      "Data selection (manual / automatic)"),
+    "f.mode_material": ("Modo · material y protecciones", "Mode · material and protections"),
+    "f.mode_connection": ("Modo · conexión", "Mode · connection"),
+    "f.mode_geometry": ("Modo · geometría", "Mode · geometry"),
+    "f.mode_sensor": ("Modo · vaina del sensor", "Mode · sensor sheath"),
+    "mode.manual": ("Manual (los cargo yo)", "Manual (I enter them)"),
+    "mode.auto": ("Automático (recomienda el programa)", "Automatic (program recommends)"),
+    "mode.auto_hint": ("Los campos en gris los completa el programa al calcular, con su "
+                       "justificación en «Resumen ASME» y en la memoria. Son recomendaciones "
+                       "orientativas sujetas a revisión de un ingeniero.",
+                       "Greyed-out fields are filled by the program on calculation, with their "
+                       "justification in «ASME summary» and in the memo. They are guidance, "
+                       "subject to review by an engineer."),
+    "res.auto_title": ("Selección automática y justificación", "Automatic selection and rationale"),
+    "res.auto_block": ("Bloque", "Block"),
+    "res.auto_field": ("Dato", "Item"),
+    "res.auto_value": ("Valor elegido", "Chosen value"),
+    "res.auto_reason": ("Justificación", "Rationale"),
+    "res.auto_alt": ("Alternativas", "Alternatives"),
     "f.std_density": ("Densidad estándar (15 °C, 1 atm)", "Standard density (15 °C, 1 atm)"),
     "f.viscosity": ("Viscosidad dinámica", "Dynamic viscosity"),
     "f.prop_source": ("Fuente", "Source"),

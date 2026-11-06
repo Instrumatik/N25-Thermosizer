@@ -435,7 +435,8 @@ class MainWindow(QMainWindow):
 
     def _load_current(self) -> None:
         rec = self.project.tags[self.current]
-        self.editor.load(rec.input, auto_properties=rec.auto_properties)
+        self.editor.load(rec.input, auto_properties=rec.auto_properties,
+                         auto_blocks=rec.auto_blocks)
         self._update_preview(rec.input)
         ev = self.evaluations.get(self.current)
         if ev is None:
@@ -463,7 +464,8 @@ class MainWindow(QMainWindow):
         self._update_preview(inp)
         rec = self.project.tags[self.current]
         new_rec = rec.model_copy(update={"input": inp,
-                                         "auto_properties": self.editor.chk_auto.isChecked()})
+                                         "auto_properties": self.editor.chk_auto.isChecked(),
+                                         "auto_blocks": self.editor.auto_blocks()})
         if new_rec != rec:
             self._replace_tag(self.current, new_rec, t("status.modified"), merge=True)
             self.evaluations.pop(self.current, None)
@@ -587,9 +589,11 @@ class MainWindow(QMainWindow):
         if rec.auto_properties:
             self.editor.show_properties(ev.input)
         self.editor.show_material_hint(ev.input)
+        if rec.auto_blocks:
+            self.editor.show_auto(ev.input)
         self.results.show_evaluation(ev)
         self._chart_if_visible(ev)
-        if ev.status is not None and ev.status != rec.last_status:
+        if rec.auto_blocks or (ev.status is not None and ev.status != rec.last_status):
             tags = list(self.project.tags)
             tags[self.current] = rec.model_copy(update={"last_status": ev.status,
                                                         "input": ev.input})

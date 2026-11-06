@@ -854,6 +854,94 @@ _c("r.v_ir", ("Velocidad de resonancia en línea V_IR", "In-line resonance veloc
                                                                  "resonance passage criterion."),
    formulas=(r"V_{IR} = \frac{B f_{n,c}}{2 N_S}",), symbols=("V_IR",), units=("m/s.", "m/s."))
 
+# --- Selección automática por bloque ----------------------------------------------------------
+_AUTO_ROLE = ("En «Automático» el programa completa el bloque al calcular, a partir de la "
+              "biblioteca y de los resultados, y deja la justificación en pantalla («Resumen "
+              "ASME»), en la hoja de datos y en la memoria («Selección automática y "
+              "justificación»). En «Manual» se usan los datos que usted cargue.",
+              "In «Automatic» the program fills the block on calculation from the library and "
+              "the results, and records the rationale on screen («ASME summary»), in the "
+              "datasheet and in the memo («Automatic selection and rationale»). In «Manual» your "
+              "own data are used.")
+_AUTO_ACT = ("Las recomendaciones son orientativas y deben ser revisadas por un ingeniero "
+             "calificado. Para fijar un valor, vuelva el bloque a «Manual»: el editor conserva lo "
+             "último calculado.", "Recommendations are guidance and must be reviewed by a "
+             "qualified engineer. To fix a value, switch the block back to «Manual»: the editor "
+             "keeps the last computed values.")
+_AUTO_IN = ("Siempre los carga usted: condiciones de proceso (P y T de operación y diseño), "
+            "tipo de fluido y fluido, casos de flujo, H₂S, cloruros, pH y sólidos si aplican, "
+            "NPS, schedule, Hs y diámetro interno de la conexión de montaje.",
+            "You always enter: process conditions (operating and design P and T), fluid type "
+            "and fluid, flow cases, H₂S, chlorides, pH and solids if they apply, NPS, schedule, "
+            "Hs and mounting connection inside diameter.")
+_c("f.mode_material", ("Modo: material y protecciones", "Mode: material and protections"),
+   ("Elige si el material, el recubrimiento y el sobreespesor de corrosión los carga usted o los "
+    "recomienda el programa.", "Chooses whether material, coating and corrosion allowance are "
+    "entered by you or recommended by the program."), _AUTO_ROLE,
+   affects=("Material (ρ_m, E, S, fatiga, grupo B16.5), recubrimiento y ca; por lo tanto f_n, "
+            "esfuerzos admisibles y rating.", "Material (ρ_m, E, S, fatigue, B16.5 group), "
+            "coating and ca; hence f_n, allowable stresses and rating."),
+   compare=("Material: matriz de selección de la biblioteca a la temperatura de diseño con H₂S, "
+            "cloruros, pH y sólidos; entre aptos se prefiere 316/316L y se listan alternativas. "
+            "Recubrimiento: recargue duro si hay sólidos o V/V_e ≥ 0,7. Sobreespesor: 1 mm en "
+            "servicio agresivo.", "Material: library selection matrix at design temperature "
+            "with H₂S, chlorides, pH and solids; among suitable ones 316/316L is preferred and "
+            "alternatives are listed. Coating: hard-facing with solids or V/V_e ≥ 0.7. "
+            "Allowance: 1 mm in aggressive service."),
+   limits=_AUTO_IN, actions=_AUTO_ACT,
+   reference=("Criterios de práctica (NACE MR0175/ISO 15156 para H₂S, API RP 14E para erosión) "
+              "resumidos en la biblioteca.", "Practice criteria (NACE MR0175/ISO 15156 for H₂S, "
+              "API RP 14E for erosion) summarised in the library."))
+_c("f.mode_connection", ("Modo: conexión", "Mode: connection"),
+   ("Elige si el tipo, el tamaño, la clase y la cara de la conexión los carga usted o los "
+    "recomienda el programa.", "Chooses whether connection type, size, class and face are "
+    "entered by you or recommended by the program."), _AUTO_ROLE,
+   affects=("Rating de brida, diseño típico disponible y hoja de datos.",
+            "Flange rating, available typical designs and datasheet."),
+   compare=("Roscada solo en utilidades no peligrosas (agua, aire, nitrógeno) ≤ 20 barg y "
+            "≤ 200 °C; soldada desde clase 1500; en el resto, bridada. Clase: la menor de "
+            "ASME B16.5 que admite la presión de diseño a la temperatura de diseño para el "
+            "grupo del material. Cara: RF hasta clase 600 y RTJ desde 900. Tamaño: tabla de "
+            "tamaños sugeridos por NPS (editable).", "Threaded only for non-hazardous utilities "
+            "(water, air, nitrogen) ≤ 20 barg and ≤ 200 °C; weld-in from class 1500; otherwise "
+            "flanged. Class: the smallest ASME B16.5 class that holds the design pressure at "
+            "design temperature for the material group. Face: RF up to class 600 and RTJ from "
+            "900. Size: suggested-size table by NPS (editable)."),
+   limits=_AUTO_IN, actions=_AUTO_ACT,
+   reference=("ASME B16.5 (rating por grupo de material); práctica habitual de especificaciones "
+              "de cañería.", "ASME B16.5 (rating by material group); common piping-spec "
+              "practice."))
+_c("f.mode_geometry", ("Modo: geometría", "Mode: geometry"),
+   ("Elige si el perfil y las cotas U, A, B, d, L0 los carga usted o los busca el programa "
+    "iterando con la verificación ASME.", "Chooses whether profile and dimensions U, A, B, d, "
+    "L0 are entered by you or searched by the program iterating with the ASME check."),
+   _AUTO_ROLE,
+   affects=("Todos los resultados de frecuencia y esfuerzos.",
+            "All frequency and stress results."),
+   compare=("Se parte del U normalizado que deja la punta al menos 1/3 del diámetro (o 100 mm) "
+            "dentro del flujo; se prueban diseños típicos cónicos, luego escalonados y rectos, "
+            "con agujero 0,260\" o 0,385\", que entren en la conexión de montaje; si ninguno "
+            "cumple se prueban largos más cortos. Se elige el primero que cumple; si ninguno, "
+            "el de mejor margen y se avisa.", "Starting from the standard U that puts the tip "
+            "at least 1/3 of the diameter (or 100 mm) into the flow, tapered typical designs "
+            "are tried, then stepped and straight, with 0.260\" or 0.385\" bore, that fit the "
+            "mounting connection; if none passes shorter lengths are tried. The first passing "
+            "one is chosen; if none, the best-margin one with a warning."),
+   limits=_AUTO_IN, actions=_AUTO_ACT, reference=_GEOM_REF, diagram="tw:U")
+_c("f.mode_sensor", ("Modo: vaina del sensor", "Mode: sensor sheath"),
+   ("Elige si el diámetro de vaina lo carga usted o lo elige el programa según el agujero.",
+    "Chooses whether the sheath diameter is entered by you or chosen by the program from the "
+    "bore."), _AUTO_ROLE,
+   affects=("Solo la hoja de datos y el huelgo sensor–agujero.",
+            "Only the datasheet and the sensor–bore clearance."),
+   compare=("6 mm para agujero de 0,260\" (6,6 mm) y 8 mm para 0,385\" (9,8 mm), con sensor a "
+            "resorte.", "6 mm for a 0.260\" (6.6 mm) bore and 8 mm for 0.385\" (9.8 mm), "
+            "spring-loaded."), actions=_AUTO_ACT)
+_c("topic.auto", ("Selección automática y justificación", "Automatic selection and rationale"),
+   ("Lista de los valores que completó el programa en los bloques en «Automático», con su "
+    "justificación y alternativas.", "List of the values the program filled in the blocks set "
+    "to «Automatic», with rationale and alternatives."), _AUTO_ROLE, actions=_AUTO_ACT)
+
 # --- Estado ASME por tema y criterios --------------------------------------------------------
 _c("topic.erosion", ("Evaluación de erosión", "Erosion evaluation"),
    ("Veredicto de erosión con la relación V/V_e del peor caso.", "Erosion verdict with the "
@@ -936,6 +1024,7 @@ ALIASES: Final[dict[str, str]] = {
     "von_mises": "r.von_mises",
     # opciones con otra clave de texto
     "opt.flange_manual": "opt.flange_manual", "f.nozzle": "f.mount",
+    "f.auto_select": "topic.auto", "res.auto_title": "topic.auto",
 }
 
 

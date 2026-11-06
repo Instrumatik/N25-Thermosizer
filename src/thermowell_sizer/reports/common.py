@@ -129,14 +129,27 @@ TEXT: Final[dict[str, tuple[str, str]]] = {
         "when applicable, the variants with corrosion allowance consumed at root and tip "
         "(para. 6-2)."),
     "m.inputs": ("3. Datos de entrada", "3. Input data"),
-    "m.material": ("4. Propiedades del material", "4. Material properties"),
-    "m.options": ("5. Opciones de cálculo", "5. Calculation options"),
-    "m.summary": ("6. Resumen de verificaciones", "6. Check summary"),
-    "m.cases": ("7. Resumen por caso", "7. Case summary"),
-    "m.trace": ("8. Desarrollo del cálculo", "8. Detailed calculation"),
-    "m.charts": ("9. Sensibilidad", "9. Sensitivity"),
-    "m.extra": ("10. Criterios adicionales", "10. Additional criteria"),
-    "m.notes": ("11. Notas y advertencias", "11. Notes and warnings"),
+    "ds.corr_cases": ("Los casos con sobreespesor de corrosión consumido (raíz y punta) se "
+                      "detallan en la memoria de cálculo.", "Cases with the corrosion allowance "
+                      "consumed (root and tip) are detailed in the calculation memo."),
+    "m.auto": ("4. Selección automática y justificación", "4. Automatic selection and rationale"),
+    "m.auto_text": ("Valores que completó el programa en los bloques en modo «Automático», con "
+                   "la justificación de cada elección y sus alternativas. El resto de los datos "
+                   "fue cargado por el usuario.", "Values filled by the program in the blocks set "
+                   "to «Automatic», with the rationale for each choice and its alternatives. "
+                   "All other data were entered by the user."),
+    "m.auto_none": ("Todos los bloques en modo «Manual»: los datos de material, conexión, "
+                   "geometría y sensor fueron cargados por el usuario.", "All blocks in "
+                   "«Manual» mode: material, connection, geometry and sensor data were entered "
+                   "by the user."),
+    "m.material": ("5. Propiedades del material", "5. Material properties"),
+    "m.options": ("6. Opciones de cálculo", "6. Calculation options"),
+    "m.summary": ("7. Resumen de verificaciones", "7. Check summary"),
+    "m.cases": ("8. Resumen por caso", "8. Case summary"),
+    "m.trace": ("9. Desarrollo del cálculo", "9. Detailed calculation"),
+    "m.charts": ("10. Sensibilidad", "10. Sensitivity"),
+    "m.extra": ("11. Criterios adicionales", "11. Additional criteria"),
+    "m.notes": ("12. Notas y advertencias", "12. Notes and warnings"),
     "m.common": ("Valores comunes", "Common values"),
     "criterion": ("Criterio", "Criterion"), "value": ("Valor", "Value"),
     "limit": ("Límite", "Limit"), "margin": ("Margen", "Margin"),

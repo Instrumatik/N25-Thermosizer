@@ -1,9 +1,9 @@
 ; Instalador de Windows de ThermoWell Sizer (Inno Setup 6).
-;   iscc /DAppVersion=1.2.0 packaging\installer.iss
+;   iscc /DAppVersion=1.3.0 packaging\installer.iss
 ; Toma la carpeta generada por PyInstaller en dist\ThermoWellSizer.
 
 #ifndef AppVersion
-  #define AppVersion "1.2.0"
+  #define AppVersion "1.3.0"
 #endif
 
 [Setup]

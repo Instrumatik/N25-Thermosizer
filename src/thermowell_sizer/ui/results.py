@@ -29,6 +29,8 @@ from thermowell_sizer.reports.common import CRITERION_NAMES, SCOPE_NAMES
 from thermowell_sizer.services import Evaluation, render_advisory
 from thermowell_sizer.summary import (
     asme_status,
+    auto_note,
+    auto_rows,
     calculated_results,
     label,
     length_convention,
@@ -112,6 +114,24 @@ def overview_html(ev: Evaluation) -> str:
                    f"<td><span style='color:{color}'>●</span> {bold[0]}"
                    f"{label(line.verdict, es)}{bold[1]}{extra}</td></tr>")
     out.append("</table>")
+    autos = auto_rows(ev, es, _q)
+    if autos:
+        out.append(f"<h3>{t('res.auto_title')} {_info('topic.auto')}</h3>"
+                   "<table cellspacing='0' cellpadding='3' border='1' "
+                   "style='border-collapse:collapse'><tr>"
+                   f"<th width='20%'>{t('res.auto_field')}</th>"
+                   f"<th width='22%'>{t('res.auto_value')}</th>"
+                   f"<th width='58%'>{t('res.auto_reason')}</th></tr>")
+        last = ""
+        for ar in autos:
+            if ar.block != last:
+                out.append(f"<tr><td colspan='3'><b>{html.escape(ar.block)}</b></td></tr>")
+                last = ar.block
+            alt = (f"<br/><i>{t('res.auto_alt')}: {html.escape(ar.alternatives)}</i>"
+                   if ar.alternatives else "")
+            out.append(f"<tr><td>{html.escape(ar.item)}</td><td><b>{html.escape(ar.value)}</b>"
+                       f"</td><td>{html.escape(ar.reason)}{alt}</td></tr>")
+        out.append(f"</table><p><small>{html.escape(auto_note(es))}</small></p>")
     cases = calculated_results(ev)
     if cases:
         out.append(f"<h3>{t('res.calculated')}</h3>"
