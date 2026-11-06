@@ -45,7 +45,6 @@ from thermowell_sizer.data.database import Library
 from thermowell_sizer.data.fluid_groups import FLUID_TYPES, TYPES_BY_ID, fluid_label, type_for
 from thermowell_sizer.i18n import tr
 from thermowell_sizer.ui.design_ui import DesignContext, DesignDialog
-from thermowell_sizer.ui.infocard_ui import InfoButton, add_info_buttons, info_label, with_info
 from thermowell_sizer.ui.state import STATE
 from thermowell_sizer.ui.text import enum_text, t
 from thermowell_sizer.ui.widgets import EnumCombo, QuantityEdit, fmt, fmt_quantity
@@ -173,10 +172,6 @@ class TagEditor(QWidget):
         self.mode_combos: dict[str, QComboBox] = {}
         self.pages = [self._page_identification(), self._page_process(), self._page_pipe(),
                       self._page_thermowell(), self._page_sensor()]
-        self.info_keys: list[str] = []
-        for page in self.pages:
-            for form in page.findChildren(QFormLayout):
-                self.info_keys += add_info_buttons(form)
 
         self.steps = QListWidget()
         self.steps.setMaximumWidth(150)
@@ -265,6 +260,7 @@ class TagEditor(QWidget):
         lay = QVBoxLayout(page)
         box = QGroupBox(t("step.process"))
         f = _form(box)
+        f.addRow(t("f.mode_process"), self._mode_combo("process", t("mode.auto_process")))
         es = STATE.language.value == "es"
         self._fluid_names = {fl.id: fl.name_es if es else fl.name_en
                              for fl in self.library.fluids()}
@@ -288,7 +284,8 @@ class TagEditor(QWidget):
         self.chk_auto = QCheckBox(t("f.auto_props"))
         self.chk_auto.setChecked(True)
         self.chk_auto.toggled.connect(self._auto_toggled)
-        f.addRow(self.chk_auto)
+        self.chk_auto.hide()  # el modo del bloque se elige con el selector de arriba
+        self.mode_combos["process"].setCurrentIndex(1)
         f.addRow(t("f.density"), self._q("density", QuantityKind.DENSITY, minimum=1e-9))
         f.addRow(t("f.viscosity"), self._q("viscosity", QuantityKind.DYNAMIC_VISCOSITY,
                                             minimum=1e-12))
@@ -303,9 +300,7 @@ class TagEditor(QWidget):
         self.cases_layout = QVBoxLayout(cases)
         head = QHBoxLayout()
         for key in ("f.case", "f.basis", "f.value"):
-            head.addWidget(with_info(QLabel(f"<b>{t(key)}</b>"), key),
-                           2 if key == "f.value" else 1)
-        head.addWidget(InfoButton("f.flow_cases"))
+            head.addWidget(QLabel(f"<b>{t(key)}</b>"), 2 if key == "f.value" else 1)
         head.addSpacing(28)
         self.cases_layout.addLayout(head)
         self.btn_add_case = QPushButton(t("f.add_case"))
@@ -319,16 +314,16 @@ class TagEditor(QWidget):
         self.chk_erosive = QCheckBox(t("f.erosive"))
         for chk in (self.chk_nace, self.chk_erosive):
             chk.toggled.connect(self._emit)
-        g.addWidget(info_label(t("f.h2s"), "f.h2s"), 0, 0)
+        g.addWidget(QLabel(t("f.h2s")), 0, 0)
         g.addWidget(self._q("h2s", QuantityKind.PRESSURE, minimum=0.0, optional=True), 0, 1)
-        g.addWidget(info_label(t("f.chlorides"), "f.chlorides"), 1, 0)
+        g.addWidget(QLabel(t("f.chlorides")), 1, 0)
         self.e_chlorides = self._line()
         g.addWidget(self.e_chlorides, 1, 1)
-        g.addWidget(info_label(t("f.ph"), "f.ph"), 2, 0)
+        g.addWidget(QLabel(t("f.ph")), 2, 0)
         self.e_ph = self._line()
         g.addWidget(self.e_ph, 2, 1)
-        g.addWidget(with_info(self.chk_nace, "f.nace"), 3, 0, 1, 2)
-        g.addWidget(with_info(self.chk_erosive, "f.erosive"), 4, 0, 1, 2)
+        g.addWidget(self.chk_nace, 3, 0, 1, 2)
+        g.addWidget(self.chk_erosive, 4, 0, 1, 2)
         lay.addWidget(corr)
         lay.addStretch(1)
         return page
@@ -336,6 +331,8 @@ class TagEditor(QWidget):
     def _page_pipe(self) -> QWidget:
         box = QGroupBox(t("step.pipe"))
         f = _form(box)
+        f.addRow(t("f.mode_pipe"), self._mode_combo("pipe", t("mode.auto_pipe")))
+        self.mode_combos["pipe"].setCurrentIndex(1)
         self.c_nps = QComboBox()
         self.c_nps.addItems([*self.library.pipe_sizes(), CUSTOM_PIPE])
         self.c_sch = QComboBox()
@@ -362,29 +359,49 @@ class TagEditor(QWidget):
                                             optional=True))
         return _top(box)
 
-    def _mode_combo(self, block: str) -> QComboBox:
+    def _mode_combo(self, block: str, auto_text: str | None = None) -> QComboBox:
         combo = QComboBox()
+        combo.setObjectName("modeCombo")
         combo.addItem(t("mode.manual"), False)
-        combo.addItem(t("mode.auto"), True)
-        combo.currentIndexChanged.connect(self._emit)
+        combo.addItem(auto_text or t("mode.auto"), True)
+        combo.setStyleSheet("QComboBox#modeCombo { font-weight: bold; }")
+        combo.currentIndexChanged.connect(lambda: self._mode_changed(block))
         self.mode_combos[block] = combo
         return combo
+
+    def _mode_changed(self, block: str) -> None:
+        auto = bool(self.mode_combos[block].currentData())
+        if block == "process":
+            if self.chk_auto.isChecked() != auto:
+                self.chk_auto.setChecked(auto)
+            return
+        if block == "pipe":
+            if not hasattr(self, "c_nps"):  # aún construyendo la página
+                return
+            custom = self.c_nps.currentText() == CUSTOM_PIPE
+            if auto and custom:
+                self.c_nps.setCurrentIndex(max(self.c_nps.findText("6"), 0))
+            elif not auto and not custom:
+                self.c_nps.setCurrentIndex(self.c_nps.count() - 1)
+            return
+        self._emit()
 
     def _page_thermowell(self) -> QWidget:
         page = QWidget()
         lay = QVBoxLayout(page)
-        modes = QGroupBox(t("f.auto_select"))
-        mf = _form(modes)
-        mf.addRow(t("f.mode_material"), self._mode_combo("material"))
-        mf.addRow(t("f.mode_connection"), self._mode_combo("connection"))
-        mf.addRow(t("f.mode_geometry"), self._mode_combo("geometry"))
         hint = QLabel(t("mode.auto_hint"))
         hint.setWordWrap(True)
         hint.setObjectName("hintLabel")
-        mf.addRow("", hint)
-        lay.addWidget(modes)
-        left = QGroupBox(t("step.thermowell"))
+        lay.addWidget(hint)
+        conn_box = QGroupBox(t("blk.connection"))
+        fc = _form(conn_box)
+        fc.addRow(t("f.mode_connection"), self._mode_combo("connection"))
+        mat_box = QGroupBox(t("blk.material"))
+        fm = _form(mat_box)
+        fm.addRow(t("f.mode_material"), self._mode_combo("material"))
+        left = QGroupBox(t("blk.geometry"))
         f = _form(left)
+        f.addRow(t("f.mode_geometry"), self._mode_combo("geometry"))
         self.c_profile = EnumCombo(list(ShankProfile))
         self.c_profile.currentIndexChanged.connect(self._profile_changed)
         self.c_conn = EnumCombo(list(ConnectionType))
@@ -407,33 +424,33 @@ class TagEditor(QWidget):
         for c in self.library.coatings():
             self.c_coating.addItem(c[1] if STATE.language.value == "es" else c[2], c[0])
         self.c_coating.currentIndexChanged.connect(self._emit)
-        f.addRow(t("f.profile"), self.c_profile)
-        f.addRow(t("f.connection"), self.c_conn)
-        f.addRow(t("f.conn_size"), self.e_conn_size)
+        fc.addRow(t("f.connection"), self.c_conn)
+        fc.addRow(t("f.conn_size"), self.e_conn_size)
         self.l_size_hint = QLabel()
         self.l_size_hint.setObjectName("hintLabel")
-        f.addRow("", self.l_size_hint)
-        f.addRow(t("f.rating"), self.c_rating)
-        f.addRow(t("f.face"), self.c_face)
-        f.addRow(t("f.material"), self.c_material)
-        f.addRow(t("f.coating"), self.c_coating)
-        f.addRow(t("f.E_manual"), self._q("mat_E", QuantityKind.ELASTIC_MODULUS, minimum=1e9,
-                                           optional=True))
-        f.addRow(t("f.S_manual"), self._q("mat_S", QuantityKind.STRESS, minimum=1e5,
-                                           optional=True))
+        fc.addRow("", self.l_size_hint)
+        fc.addRow(t("f.rating"), self.c_rating)
+        fc.addRow(t("f.face"), self.c_face)
+        fm.addRow(t("f.material"), self.c_material)
+        fm.addRow(t("f.coating"), self.c_coating)
+        fm.addRow(t("f.E_manual"), self._q("mat_E", QuantityKind.ELASTIC_MODULUS, minimum=1e9,
+                                            optional=True))
+        fm.addRow(t("f.S_manual"), self._q("mat_S", QuantityKind.STRESS, minimum=1e5,
+                                            optional=True))
+        fm.addRow(t("f.ca"), self._q("g_ca", QuantityKind.LENGTH, minimum=0.0))
         self.l_mat_lib = QLabel()
         self.l_mat_lib.setObjectName("hintLabel")
         self.l_mat_lib.setWordWrap(True)
-        f.addRow("", self.l_mat_lib)
-        right = QGroupBox(t("f.dimensions"))
-        g = _form(right)
+        fm.addRow("", self.l_mat_lib)
+        f.addRow(t("f.profile"), self.c_profile)
+        g = f
         self.geometry_rows: dict[str, QLabel] = {}
         for key, kind in (("L", QuantityKind.LENGTH), ("U", QuantityKind.LENGTH),
                           ("A", QuantityKind.DIAMETER), ("B", QuantityKind.DIAMETER),
                           ("d", QuantityKind.DIAMETER), ("t", QuantityKind.LENGTH),
                           ("b", QuantityKind.LENGTH), ("Ls", QuantityKind.LENGTH),
                           ("bs", QuantityKind.LENGTH), ("T_lag", QuantityKind.LENGTH),
-                          ("L0", QuantityKind.LENGTH), ("ca", QuantityKind.LENGTH)):
+                          ("L0", QuantityKind.LENGTH)):
             label = QLabel(t(f"f.{key}"))
             self.geometry_rows[key] = label
             optional = key in ("U",)
@@ -444,9 +461,10 @@ class TagEditor(QWidget):
         g.addRow("", self.l_u_breakdown)
         self.btn_design = QPushButton(t("des.button"))
         self.btn_design.clicked.connect(self.open_design_dialog)
-        lay.addWidget(self.btn_design)
+        f.insertRow(1, "", self.btn_design)
+        lay.addWidget(conn_box)
+        lay.addWidget(mat_box)
         lay.addWidget(left)
-        lay.addWidget(right)
         lay.addStretch(1)
         return page
 
@@ -573,6 +591,11 @@ class TagEditor(QWidget):
 
     def _pipe_changed(self) -> None:
         nps = self.c_nps.currentText()
+        pipe_mode = self.mode_combos.get("pipe")
+        if pipe_mode is not None:
+            pipe_mode.blockSignals(True)
+            pipe_mode.setCurrentIndex(0 if nps == CUSTOM_PIPE else 1)
+            pipe_mode.blockSignals(False)
         if nps != CUSTOM_PIPE and self.c_sch.currentText():
             pipe = self.library.pipe(nps, self.c_sch.currentText())
             self.quantities["pipe_id"].set_value(pipe.inner_diameter)
@@ -631,6 +654,12 @@ class TagEditor(QWidget):
         self.c_face.setEnabled(flanged)
         self._apply_modes()
         custom = self.c_nps.currentText() == CUSTOM_PIPE
+        for block, auto in (("pipe", not custom), ("process", self.chk_auto.isChecked())):
+            combo = self.mode_combos.get(block)
+            if combo is not None and bool(combo.currentData()) != auto:
+                combo.blockSignals(True)
+                combo.setCurrentIndex(1 if auto else 0)
+                combo.blockSignals(False)
         for key in ("pipe_id", "pipe_od", "wall"):
             self.quantities[key].setEnabled(custom)
         self._update_mount_label()
@@ -729,8 +758,9 @@ class TagEditor(QWidget):
              auto_blocks: tuple[str, ...] = ()) -> None:
         """Muestra los datos de ``inp`` en el formulario."""
         self._loading = True
-        for block, combo in self.mode_combos.items():
-            combo.setCurrentIndex(1 if block in auto_blocks else 0)
+        for block in ("material", "connection", "geometry", "sensor"):
+            if block in self.mode_combos:
+                self.mode_combos[block].setCurrentIndex(1 if block in auto_blocks else 0)
         self._base = inp
         q = self.quantities
         idn, proc, pipe = inp.identification, inp.process, inp.pipe
@@ -751,6 +781,7 @@ class TagEditor(QWidget):
         q["t_op"].set_value(proc.operating_temperature)
         q["t_design"].set_value(proc.design_temperature)
         self.chk_auto.setChecked(auto_properties)
+        self.mode_combos["process"].setCurrentIndex(1 if auto_properties else 0)
         self.show_properties(inp)
         for row in list(self.flow_rows):
             row.setParent(None)

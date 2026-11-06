@@ -97,11 +97,6 @@ def _n(value: float, decimals: int) -> str:
     return fmt(value, decimals)
 
 
-def _info(key: str) -> str:
-    """Enlace «ⓘ» a la ficha de una clave."""
-    return f"<a href='card:{key}' style='text-decoration:none'>ⓘ</a>"
-
-
 def overview_html(ev: Evaluation) -> str:
     """HTML de la pestaña «Resumen ASME»."""
     es = STATE.language.value == "es"
@@ -110,13 +105,13 @@ def overview_html(ev: Evaluation) -> str:
         color = STATUS_COLORS[line.status]
         extra = f" (V/Ve = {fmt(line.ratio, 2)})" if line.ratio is not None else ""
         bold = ("<b>", "</b>") if line.key == "topic.overall" else ("", "")
-        out.append(f"<tr><td>{bold[0]}{label(line.key, es)}{bold[1]} {_info(line.key)}</td>"
+        out.append(f"<tr><td>{bold[0]}{label(line.key, es)}{bold[1]}</td>"
                    f"<td><span style='color:{color}'>●</span> {bold[0]}"
                    f"{label(line.verdict, es)}{bold[1]}{extra}</td></tr>")
     out.append("</table>")
     autos = auto_rows(ev, es, _q)
     if autos:
-        out.append(f"<h3>{t('res.auto_title')} {_info('topic.auto')}</h3>"
+        out.append(f"<h3>{t('res.auto_title')}</h3>"
                    "<table cellspacing='0' cellpadding='3' border='1' "
                    "style='border-collapse:collapse'><tr>"
                    f"<th width='20%'>{t('res.auto_field')}</th>"
@@ -142,7 +137,7 @@ def overview_html(ev: Evaluation) -> str:
                        f"<th>{t('res.limit')}</th>")
         out.append("</tr>")
         for i, row in enumerate(cases[0].rows):
-            out.append(f"<tr><td>{label(row.key, es)} {_info(row.key)}</td>"
+            out.append(f"<tr><td>{label(row.key, es)}</td>"
                        f"<td><i>{row.symbol}</i></td>")
             for c in cases:
                 r = c.rows[i]
@@ -152,7 +147,7 @@ def overview_html(ev: Evaluation) -> str:
                            f"</td><td align='right'>{html.escape(limit_text(r, _q, _n))}</td>")
             out.append("</tr>")
         out.append("</table>")
-    out.append(f"<h3>{t('res.convention')} {_info('f.mount')}</h3>"
+    out.append(f"<h3>{t('res.convention')}</h3>"
                "<table cellspacing='0' cellpadding='3'>")
     for key, value in length_convention(ev):
         out.append(f"<tr><td>{label(key, es)}</td><td align='right'>"
@@ -191,9 +186,6 @@ class ResultsPanel(QWidget):
         self.advice = QTextBrowser()
         self.trace = QTextBrowser()
         self.overview = QTextBrowser()
-        self.overview.setOpenLinks(False)
-        self.overview.anchorClicked.connect(
-            lambda url: show_card(url.toString().removeprefix("card:"), self))
         self.alt_list = QListWidget()
         self.btn_alt = QPushButton(t("act.optimize"))
         self.btn_apply = QPushButton(t("res.apply"))
@@ -336,7 +328,7 @@ class ResultsPanel(QWidget):
     def _case_header_clicked(self, col: int) -> None:
         item = self.cases.horizontalHeaderItem(col)
         if item is not None:
-            show_card(item.text().removesuffix(" ⓘ"), self)
+            show_card(item.text(), self)
 
     def _fill_cases(self, ev: Evaluation) -> None:
         res = ev.result
@@ -344,7 +336,7 @@ class ResultsPanel(QWidget):
         heads = ["V", "Re", "N_S", "f_s", "f_n", "H_c", "f_n,c", "N_Sc", "f_s / f_n,c",
                  "V_IR"]
         self.cases.setColumnCount(len(heads))
-        self.cases.setHorizontalHeaderLabels([f"{h} ⓘ" for h in heads])
+        self.cases.setHorizontalHeaderLabels(heads)
         self.cases.horizontalHeader().setToolTip(t("res.card_hint"))
         self.cases.setRowCount(len(res.cases))
         self.cases.setVerticalHeaderLabels([scope_label(c.scope) for c in res.cases])

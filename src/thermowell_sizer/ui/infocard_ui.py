@@ -1,4 +1,4 @@
-"""Botones «ⓘ» y ventana de fichas de ayuda."""
+"""Ventana de fichas de ayuda (se abren desde «Buscar en la biblioteca» y los resultados)."""
 
 from __future__ import annotations
 
@@ -9,14 +9,9 @@ from functools import lru_cache
 from PySide6.QtCore import QUrl
 from PySide6.QtGui import QImage, QTextDocument
 from PySide6.QtWidgets import (
-    QCheckBox,
     QDialog,
     QDialogButtonBox,
-    QFormLayout,
-    QHBoxLayout,
-    QLabel,
     QTextBrowser,
-    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -98,75 +93,6 @@ def show_card(key: str, parent: QWidget | None = None) -> bool:
         return False
     CardDialog(card, parent).exec()
     return True
-
-
-class InfoButton(QToolButton):
-    """Botón «ⓘ» que abre la ficha de una clave."""
-
-    def __init__(self, key: str, parent: QWidget | None = None) -> None:
-        super().__init__(parent)
-        self.key = key
-        self.setText("ⓘ")
-        self.setAutoRaise(True)
-        self.setObjectName("infoButton")
-        es = STATE.language.value == "es"
-        self.setToolTip("Qué es, umbrales, fórmulas y ejemplo" if es else
-                        "What it is, thresholds, formulas and example")
-        self.clicked.connect(lambda: show_card(self.key, self.window()))
-
-
-def with_info(widget: QWidget, key: str | None) -> QWidget:
-    """Envuelve un widget con su botón «ⓘ» a la derecha (si la clave tiene ficha)."""
-    if key is None or card_for(key) is None:
-        return widget
-    box = QWidget()
-    lay = QHBoxLayout(box)
-    lay.setContentsMargins(0, 0, 0, 0)
-    lay.setSpacing(2)
-    lay.addWidget(widget)
-    lay.addWidget(InfoButton(key))
-    lay.addStretch(1)
-    return box
-
-
-def info_label(text: str, key: str) -> QWidget:
-    """Etiqueta con su botón «ⓘ» (para grillas)."""
-    return with_info(QLabel(text), key)
-
-
-def add_info_buttons(form: QFormLayout) -> list[str]:
-    """Agrega «ⓘ» a cada fila con etiqueta (o casilla) de un formulario.
-
-    Returns:
-        Las claves que recibieron botón.
-    """
-    keys: list[str] = []
-    for row in range(form.rowCount()):
-        label_item = form.itemAt(row, QFormLayout.ItemRole.LabelRole)
-        span_item = form.itemAt(row, QFormLayout.ItemRole.SpanningRole)
-        if label_item is not None and isinstance(label_item.widget(), QLabel):
-            label = label_item.widget()
-            assert isinstance(label, QLabel)
-            key = key_for_label(label.text())
-            if key is None:
-                continue
-            field_item = form.itemAt(row, QFormLayout.ItemRole.FieldRole)
-            field = field_item.widget() if field_item is not None else None
-            if field is None:
-                continue
-            form.takeRow(row)
-            form.insertRow(row, with_info(label, key), field)
-            keys.append(key)
-        elif span_item is not None and isinstance(span_item.widget(), QCheckBox):
-            chk = span_item.widget()
-            assert isinstance(chk, QCheckBox)
-            key = key_for_label(chk.text())
-            if key is None:
-                continue
-            form.takeRow(row)
-            form.insertRow(row, with_info(chk, key))
-            keys.append(key)
-    return keys
 
 
 def all_card_ids() -> list[str]:

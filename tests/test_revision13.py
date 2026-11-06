@@ -137,7 +137,12 @@ def test_editor_mode_selectors(library: Library) -> None:
     assert editor.c_profile.isEnabled()
     editor.mode_combos["material"].setCurrentIndex(0)
     assert editor.c_material.isEnabled()
-    for key in ("f.mode_material", "f.mode_connection", "f.mode_geometry", "f.mode_sensor"):
-        assert key in editor.info_keys, key
+    editor.mode_combos["process"].setCurrentIndex(0)
+    assert not editor.chk_auto.isChecked()
+    assert editor.quantities["density"].isEnabled()
+    editor.mode_combos["pipe"].setCurrentIndex(0)
+    assert editor.quantities["pipe_id"].isEnabled()
+    assert set(editor.mode_combos) == {"process", "pipe", "material", "connection",
+                                       "geometry", "sensor"}
     editor.deleteLater()
     QApplication.processEvents()

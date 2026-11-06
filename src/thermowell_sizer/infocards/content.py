@@ -1025,6 +1025,7 @@ ALIASES: Final[dict[str, str]] = {
     # opciones con otra clave de texto
     "opt.flange_manual": "opt.flange_manual", "f.nozzle": "f.mount",
     "f.auto_select": "topic.auto", "res.auto_title": "topic.auto",
+    "f.mode_process": "f.auto_props", "f.mode_pipe": "f.schedule",
 }
 
 

@@ -102,13 +102,14 @@ de cada reporte muestra «Licenciado a …».
 Los campos fuera del alcance de la norma se marcan en rojo con el motivo. F1 abre la
 ayuda del paso visible.
 
-**Fichas ⓘ.** Cada dato, opción y resultado tiene un botón ⓘ (en los resultados: el
-enlace ⓘ, doble clic en un criterio o clic en el encabezado de la tabla por caso). La
+**Fichas de ayuda.** Cada dato, opción y resultado tiene una ficha que se abre desde
+**Buscar en la biblioteca** (Ctrl+K: escriba el nombre del dato) o, en los resultados, con
+doble clic en un criterio o clic en el encabezado de la tabla por caso. La
 ficha explica qué es, qué hace en el programa, qué resultados afecta, sus umbrales,
 contra qué se compara, cómo interpretarlo, qué hacer, la referencia resumida a la norma
 y las unidades, con fórmulas, diagrama del termopozo con la cota resaltada, esquemas de
 instalación, curvas trazadas con los datos del tag y un ejemplo resuelto con el tag
-actual y con un caso de referencia. Las fichas también aparecen en la búsqueda Ctrl+K.
+actual y con un caso de referencia.
 
 ### 4.1 Diseños típicos y especificaciones de cliente
 
@@ -151,8 +152,10 @@ marcado) salen en la hoja de datos y en la memoria de cálculo.
 
 ### 4.3 Selección automática por bloque (manual / automático)
 
-Arriba del paso *Termopozo* (y al comienzo del paso *Sensor*) cada bloque de datos tiene
-un selector **Manual / Automático**:
+Cada bloque de datos empieza con su selector **Modo: Manual / Automático** (en negrita):
+*Proceso* (propiedades del fluido), *Tubería*, y en el paso *Termopozo* los bloques
+*Conexión a proceso*, *Material y protecciones* y *Geometría del termopozo*; el paso
+*Sensor* tiene el suyo para la vaina:
 
 | Bloque | En automático el programa elige | Criterio resumido |
 |---|---|---|

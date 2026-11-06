@@ -133,6 +133,14 @@ UI: Final[dict[str, tuple[str, str]]] = {
     "f.density": ("Densidad", "Density"),
     "f.auto_select": ("Selección de datos (manual / automática)",
                       "Data selection (manual / automatic)"),
+    "f.mode_process": ("Modo · propiedades del fluido", "Mode · fluid properties"),
+    "f.mode_pipe": ("Modo · tubería", "Mode · pipe"),
+    "mode.auto_process": ("Automático (CoolProp / biblioteca)", "Automatic (CoolProp / library)"),
+    "mode.auto_pipe": ("Automático (tabla NPS y schedule)", "Automatic (NPS and schedule table)"),
+    "search.card": ("Ficha", "Card"),
+    "blk.connection": ("Conexión a proceso", "Process connection"),
+    "blk.material": ("Material y protecciones", "Material and protections"),
+    "blk.geometry": ("Geometría del termopozo", "Thermowell geometry"),
     "f.mode_material": ("Modo · material y protecciones", "Mode · material and protections"),
     "f.mode_connection": ("Modo · conexión", "Mode · connection"),
     "f.mode_geometry": ("Modo · geometría", "Mode · geometry"),
@@ -291,9 +299,9 @@ UI: Final[dict[str, tuple[str, str]]] = {
     "res.ref": ("Referencia", "Reference"),
     "res.summary": ("Resumen por caso", "Case summary"),
     "res.overview": ("Resumen ASME", "ASME overview"),
-    "res.card_hint": ("Doble clic (o clic en el encabezado ⓘ): abre la ficha con la explicación, "
+    "res.card_hint": ("Doble clic (o clic en el encabezado): abre la ficha con la explicación, "
                       "las fórmulas y un ejemplo.",
-                      "Double-click (or click the ⓘ header): opens the card with the "
+                      "Double-click (or click the header): opens the card with the "
                       "explanation, formulas and an example."),
     "res.asme_status": ("Estado ASME", "ASME status"),
     "res.calculated": ("Resultados calculados", "Calculated results"),

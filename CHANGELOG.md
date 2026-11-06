@@ -15,7 +15,12 @@ Revisión del usuario sobre la versión 1.2.0.
   de la hoja de datos y en la nueva sección «4. Selección automática y justificación» de
   la memoria PDF y Word (las secciones siguientes pasan a 5–12). En la tabla de datos de
   entrada el origen puede ser cargado, calculado o automático.
-- Fichas ⓘ de los selectores nuevos y de la sección de justificación.
+- Selector **Modo: Manual / Automático** al comienzo de cada bloque (Proceso, Tubería,
+  Conexión a proceso, Material y protecciones, Geometría del termopozo y Sensor); el paso
+  Termopozo queda dividido en esos tres bloques.
+- Se quitan todos los botones ⓘ de la interfaz: las fichas se buscan con «Buscar en la
+  biblioteca» (Ctrl+K) y siguen abriéndose con doble clic en los resultados. Fichas nuevas
+  para los selectores y la sección de justificación.
 - Diseño típico bridado escalonado corregido a punta de 7/8" (la correlación de la norma
   solo admite 1/2" y 7/8").
 - Resultados calculados en tablas de hasta tres casos; la hoja de datos muestra los casos

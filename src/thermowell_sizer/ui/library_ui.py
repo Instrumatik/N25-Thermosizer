@@ -362,7 +362,7 @@ class SearchPalette(QDialog):
         kinds = {"material": "🔩", "coating": "🛡", "fluid": "💧", "glossary": "📖",
                  "standard": "📘"}
         for cid, title in search_cards(text, _es()):
-            item = QListWidgetItem(f"ⓘ {title}")
+            item = QListWidgetItem(f"{t('search.card')}: {title}")
             item.setData(Qt.ItemDataRole.UserRole, ("card", cid))
             self.results.addItem(item)
         for hit in self.library.search(text):
