@@ -154,7 +154,7 @@ class AboutDialog(QDialog):
         self.setWindowTitle(t("act.about"))
         lay = QVBoxLayout(self)
         logo = QLabel()
-        pix = QPixmap(str(asset_path("logo_instrumatik.png")))
+        pix = QPixmap(str(asset_path("logo_tws.png")))
         if not pix.isNull():
             logo.setPixmap(pix.scaledToWidth(260, Qt.TransformationMode.SmoothTransformation))
         lay.addWidget(logo, 0, Qt.AlignmentFlag.AlignHCenter)

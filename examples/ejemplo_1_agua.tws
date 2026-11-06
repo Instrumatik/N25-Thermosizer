@@ -63,6 +63,8 @@
           "material_id": "",
           "orientation": "perpendicular",
           "insulation_thickness": 0.0,
+          "wall_thickness": 0.00711,
+          "mount_height": null,
           "nozzle_length": 0.0,
           "nozzle_inner_diameter": null
         },
@@ -86,7 +88,9 @@
           },
           "material": {
             "material_id": "SS316",
-            "coating": ""
+            "coating": "",
+            "elastic_modulus": null,
+            "allowable_stress": null
           },
           "connection": {
             "type": "flanged",

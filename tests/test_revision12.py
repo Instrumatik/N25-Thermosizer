@@ -217,3 +217,13 @@ def test_every_editor_field_has_a_card(library: Library) -> None:
     assert not missing, missing
     assert len(set(editor.info_keys)) >= 50
     del _app
+
+
+def test_logo_and_icon_assets() -> None:
+    root = Path(__file__).resolve().parents[1]
+    assets = root / "src" / "thermowell_sizer" / "assets"
+    for name in ("logo_tws.png", "icon_tws.png", "icon_t.png"):
+        assert (assets / name).is_file(), name
+    ico = (root / "packaging" / "thermowell_sizer.ico").read_bytes()
+    assert ico[:4] == b"\x00\x00\x01\x00"
+    assert int.from_bytes(ico[4:6], "little") == 7  # 16, 24, 32, 48, 64, 128, 256 px
