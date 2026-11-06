@@ -641,7 +641,7 @@ class MainWindow(QMainWindow):
         else:
             self.results.show_no_alternatives()
         self.results.alt_list.setToolTip(NO_COLLARS_NOTE)
-        self.results.tabs.setCurrentIndex(4)
+        self.results.tabs.setCurrentWidget(self.results.alt_page)
 
     def apply_alternative(self, alt: Alternative) -> None:
         """Aplica una alternativa al tag activo."""

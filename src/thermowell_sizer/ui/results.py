@@ -49,7 +49,7 @@ CRITERION_KIND: dict[str, tuple[QuantityKind, bool]] = {
     "flange_rating": (QuantityKind.PRESSURE, True),
     "low_velocity": (QuantityKind.VELOCITY, False),
     "frequency_limit": (QuantityKind.FREQUENCY, False),
-    "inline_lockin_dwell": (QuantityKind.FREQUENCY, False),
+    "inline_lockin_dwell": (QuantityKind.DIMENSIONLESS, False),
     "fatigue_data": (QuantityKind.STRESS, False),
 }
 MARGIN_DECIMALS = 1
@@ -194,6 +194,7 @@ class ResultsPanel(QWidget):
         self.btn_apply.clicked.connect(self._apply)
         self.alt_list.currentRowChanged.connect(lambda r: self.btn_apply.setEnabled(r >= 0))
         alt = QWidget()
+        self.alt_page = alt
         alt_l = QVBoxLayout(alt)
         alt_l.addWidget(self.alt_list)
         row = QHBoxLayout()
@@ -251,8 +252,9 @@ class ResultsPanel(QWidget):
         th = ev.thermal
         if th is not None:
             parts.append(t("res.thermal", tau=fmt(th.tau, 0), t90=fmt(th.t90, 0),
-                           err=fmt_quantity(abs(th.immersion_error),
-                                            QuantityKind.TEMPERATURE_DIFFERENCE)))
+                           err=(f"{fmt(0.0, 2)} K" if abs(th.immersion_error) < 0.01 else
+                                fmt_quantity(abs(th.immersion_error),
+                                             QuantityKind.TEMPERATURE_DIFFERENCE))))
         self.lbl_summary.setText(" · ".join(parts))
         self._fill_checks(res.checks)
         self._fill_cases(ev)

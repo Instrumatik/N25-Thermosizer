@@ -16,7 +16,13 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Final
 
-from thermowell_sizer.core.advisories import EROSION_WATCH_RATIO, advise, erosional_velocity
+from thermowell_sizer.core.advisories import (
+    BORE_GAP_MAX,
+    BORE_GAP_MIN,
+    EROSION_WATCH_RATIO,
+    advise,
+    erosional_velocity,
+)
 from thermowell_sizer.core.designs import (
     BORE_260,
     BORE_385,
@@ -58,6 +64,8 @@ VerifyFn = Callable[[CalcInput], tuple[CheckStatus, float] | None]
 """Verifica un candidato: estado global y peor margen (%); ``None`` si no se puede calcular."""
 """Verifica un candidato y devuelve su estado (lo provee ``services``)."""
 
+SHEATHS: Final = (3.0e-3, 4.5e-3, 6.0e-3, 6.35e-3, 8.0e-3, 9.525e-3)
+"""Diámetros de vaina habituales: 3, 4,5, 6 mm, 1/4", 8 mm y 3/8"."""
 AUTO_BLOCKS: Final = ("material", "connection", "geometry", "sensor")
 BLOCK_NAMES: Final[dict[str, tuple[str, str]]] = {
     "process": ("Propiedades del fluido", "Fluid properties"),
@@ -509,7 +517,9 @@ def _geometry_decisions(cand: CalcInput, design: TypicalDesign, u: float, nozzle
 # --- Sensor -------------------------------------------------------------------------------------
 def _choose_sensor(inp: CalcInput, out: list[Decision]) -> CalcInput:
     d = inp.thermowell.geometry.d
-    sheath = 6.0e-3 if d < 8.0e-3 else 8.0e-3
+    # la vaina normalizada más gruesa que deja un huelgo dentro del rango recomendado
+    fits = [s for s in SHEATHS if BORE_GAP_MIN <= d - s <= BORE_GAP_MAX]
+    sheath = max(fits) if fits else max((s for s in SHEATHS if s < d), default=d / 2)
     out.append(Decision("sensor", "f.sheath", sheath, QuantityKind.DIAMETER, _bi(
         f"Vaina normalizada para el agujero de {_mm(d)}: huelgo diametral de "
         f"{_mm(d - sheath)} (contacto térmico aceptable, inserción sin trabas).",

@@ -934,9 +934,11 @@ _c("f.mode_sensor", ("Modo: vaina del sensor", "Mode: sensor sheath"),
     "bore."), _AUTO_ROLE,
    affects=("Solo la hoja de datos y el huelgo sensor–agujero.",
             "Only the datasheet and the sensor–bore clearance."),
-   compare=("6 mm para agujero de 0,260\" (6,6 mm) y 8 mm para 0,385\" (9,8 mm), con sensor a "
-            "resorte.", "6 mm for a 0.260\" (6.6 mm) bore and 8 mm for 0.385\" (9.8 mm), "
-            "spring-loaded."), actions=_AUTO_ACT)
+   compare=("La vaina normalizada más gruesa (3, 4,5, 6 mm, 1/4\", 8 mm o 3/8\") que deja un "
+            "huelgo de 0,25 a 1,5 mm: 6,35 mm (1/4\") para 0,260\" y 9,5 mm (3/8\") para "
+            "0,385\", con sensor a resorte.", "The thickest standard sheath (3, 4.5, 6 mm, 1/4\", "
+            "8 mm or 3/8\") leaving 0.25 to 1.5 mm clearance: 6.35 mm (1/4\") for 0.260\" and "
+            "9.5 mm (3/8\") for 0.385\", spring-loaded."), actions=_AUTO_ACT)
 _c("topic.auto", ("Selección automática y justificación", "Automatic selection and rationale"),
    ("Lista de los valores que completó el programa en los bloques en «Automático», con su "
     "justificación y alternativas.", "List of the values the program filled in the blocks set "

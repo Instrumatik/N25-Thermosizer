@@ -317,5 +317,5 @@ def _check_kind(cid: str) -> tuple[QuantityKind, bool]:
     return {"material_temperature": (QuantityKind.TEMPERATURE, False),
             "low_velocity": (QuantityKind.VELOCITY, False),
             "frequency_limit": (QuantityKind.FREQUENCY, False),
-            "inline_lockin_dwell": (QuantityKind.FREQUENCY, False)}.get(
+            "inline_lockin_dwell": (QuantityKind.DIMENSIONLESS, False)}.get(
         cid, (QuantityKind.STRESS, False))

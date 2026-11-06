@@ -164,7 +164,7 @@ Cada bloque de datos empieza con su selector **Modo: Manual / Automático** (en 
 | Material y protecciones | material, alternativas, recubrimiento y sobreespesor de corrosión | Matriz de selección de la biblioteca a la temperatura de diseño con H₂S, cloruros, pH y sólidos; se prefiere 316/316L entre los aptos. Recargue duro si hay sólidos o V/V_e ≥ 0,7; 1 mm de sobreespesor en servicio agresivo. |
 | Conexión | tipo, tamaño, clase y cara | Roscada solo en utilidades (agua, aire, nitrógeno) ≤ 20 barg y ≤ 200 °C; soldada desde clase 1500; bridada en el resto. Clase B16.5 mínima para la presión de diseño y el grupo del material; RF hasta 600, RTJ desde 900. |
 | Geometría | perfil, U, A, B, d, L0 | Se prueban diseños típicos (cónico, escalonado, recto) y largos normalizados con la verificación ASME hasta que cumple, cuidando la inmersión de la parte sensible y que el vástago entre en la conexión de montaje. Si nada cumple, se muestra el de mejor margen con un aviso. |
-| Sensor | diámetro de vaina | 6 mm para agujero 0,260" y 8 mm para 0,385", con resorte. |
+| Sensor | diámetro de vaina | La vaina normalizada más gruesa con 0,25 a 1,5 mm de huelgo: 1/4" (6,35 mm) para agujero 0,260" y 3/8" (9,5 mm) para 0,385", con resorte. |
 
 Siempre los carga usted: condiciones de proceso (P y T de operación y de diseño), tipo de
 fluido y fluido, casos de flujo, H₂S, cloruros, pH y sólidos si aplican, NPS, schedule, Hs y
