@@ -39,6 +39,7 @@ from thermowell_sizer.summary import (
 )
 
 EXAMPLES = Path(__file__).resolve().parents[1] / "examples"
+_QT_APP: object = None
 
 
 @pytest.fixture(scope="module")
@@ -198,7 +199,8 @@ def test_every_editor_field_has_a_card(library: Library) -> None:
     from thermowell_sizer.ui.dialogs import OptionsDialog, ProjectDialog
     from thermowell_sizer.ui.tag_editor import TagEditor
 
-    _app = QApplication.instance() or QApplication([])
+    global _QT_APP  # la aplicación debe vivir hasta el final de la sesión
+    _QT_APP = QApplication.instance() or QApplication([])
     editor = TagEditor(library)
     widgets = [*editor.pages, OptionsDialog(EngineOptions()),
                ProjectDialog(ProjectInfo(name="x"), ProjectSettings())]
@@ -214,9 +216,13 @@ def test_every_editor_field_has_a_card(library: Library) -> None:
                 span = form.itemAt(row, QFormLayout.ItemRole.SpanningRole)
                 if span is not None and isinstance(span.widget(), QCheckBox):
                     missing.append(span.widget().text())  # type: ignore[union-attr]
+    keys = set(editor.info_keys)
+    for w in widgets:
+        w.deleteLater()
+    editor.deleteLater()
+    QApplication.processEvents()
     assert not missing, missing
-    assert len(set(editor.info_keys)) >= 50
-    del _app
+    assert len(keys) >= 50
 
 
 def test_logo_and_icon_assets() -> None:
