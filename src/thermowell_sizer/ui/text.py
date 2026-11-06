@@ -270,6 +270,18 @@ UI: Final[dict[str, tuple[str, str]]] = {
     "res.margin": ("Margen", "Margin"),
     "res.ref": ("Referencia", "Reference"),
     "res.summary": ("Resumen por caso", "Case summary"),
+    "res.overview": ("Resumen ASME", "ASME overview"),
+    "res.asme_status": ("Estado ASME", "ASME status"),
+    "res.calculated": ("Resultados calculados", "Calculated results"),
+    "res.convention": ("Convención de largos: planilla y programa",
+                       "Length convention: spreadsheet and program"),
+    "res.convention_note": (
+        "La planilla mide la inserción desde la superficie externa de la tubería y suma Hs: "
+        "L = Hs + inserción. El programa mide U = L desde la cara de la brida, que es lo "
+        "mismo. Ambas convenciones dan el mismo largo no soportado.",
+        "The spreadsheet measures insertion from the pipe outer surface and adds Hs: "
+        "L = Hs + insertion. The program measures U = L from the flange face, which is the "
+        "same. Both conventions give the same unsupported length."),
     "res.notes": ("Notas", "Notes"),
     "res.trace": ("Traza de cálculo", "Calculation trace"),
     "res.alternatives": ("Alternativas", "Alternatives"),

@@ -149,6 +149,20 @@ def with_fluid_properties(inp: CalcInput, library: Library) -> tuple[CalcInput, 
     return inp.model_copy(update={"process": new_proc}), state.phase
 
 
+def with_wall_thickness(inp: CalcInput, library: Library) -> CalcInput:
+    """Completa el espesor de pared desde la tabla de tuberías si falta (archivos viejos)."""
+    pipe = inp.pipe
+    if pipe.wall_thickness is not None or not pipe.nominal_size or not pipe.schedule:
+        return inp
+    try:
+        wall = library.pipe(pipe.nominal_size, pipe.schedule).wall_thickness
+    except KeyError:
+        return inp
+    data = pipe.model_dump()
+    data["wall_thickness"] = wall
+    return inp.model_copy(update={"pipe": PipeData.model_validate(data)})
+
+
 def resolve_options(
     inp: CalcInput, options: EngineOptions, library: Library, settings: ProjectSettings
 ) -> tuple[EngineOptions, list[str]]:
@@ -179,6 +193,8 @@ def evaluate(record: TagRecord, library: Library, settings: ProjectSettings) -> 
     ev = Evaluation(input=inp, options=record.options)
     chosen = inp.process.phase
     detected: Phase | None = None
+    inp = with_wall_thickness(inp, library)
+    ev.input = inp
     if record.auto_properties:
         try:
             inp, detected = with_fluid_properties(inp, library)

@@ -10,11 +10,22 @@ from docx.enum.section import WD_ORIENT
 from docx.shared import Mm, Pt, RGBColor
 
 from thermowell_sizer.core.units import QuantityKind
+from thermowell_sizer.i18n import Language
 from thermowell_sizer.reports.charts import sensitivity_png
 from thermowell_sizer.reports.common import TagReport, advisory_lines, inspection_lines, short_ref
 from thermowell_sizer.reports.datasheet import calc_rows, sections
 from thermowell_sizer.reports.mathrender import plain, render_png
+from thermowell_sizer.reports.overview import formatters
 from thermowell_sizer.reports.pdfbase import logo_path
+from thermowell_sizer.summary import (
+    asme_status,
+    calculated_results,
+    input_rows,
+    label,
+    length_convention,
+    limit_text,
+    value_text,
+)
 
 A4_W, A4_H = Mm(210), Mm(297)
 EQ_WIDTH = Mm(55)
@@ -49,6 +60,7 @@ def build_word(rep: TagReport, path: Path) -> Path:
     doc.add_paragraph(f"{f.t('result')}: {f.status(ev.status)}").runs[0].bold = True
     doc.add_heading(f.t("m.scope"), 1)
     doc.add_paragraph(f.t("m.scope_text"))
+    _overview(doc, rep)
     doc.add_heading(f.t("m.inputs"), 1)
     for title, rows in sections(rep):
         doc.add_heading(title, 2)
@@ -122,3 +134,49 @@ def _kv(doc: object, rows: list[tuple[str, str]]) -> None:
         cells = table.add_row().cells
         cells[0].text = k
         cells[1].text = v
+
+
+def _grid(doc: object, head: list[str], rows: list[list[str]]) -> None:
+    table = doc.add_table(rows=1, cols=len(head))  # type: ignore[attr-defined]
+    table.style = "Light Grid Accent 1"
+    for cell, text in zip(table.rows[0].cells, head, strict=True):
+        cell.text = text
+    for row in rows:
+        for cell, text in zip(table.add_row().cells, row, strict=True):
+            cell.text = text
+
+
+def _overview(doc: object, rep: TagReport) -> None:
+    """Resumen al inicio: datos de entrada, resultados calculados, estado y convención."""
+    f, ev = rep.fmt, rep.evaluation
+    es = f.lang is Language.ES
+    q, n = formatters(rep)
+    doc.add_heading(f.t("ov.title"), 1)  # type: ignore[attr-defined]
+    doc.add_heading(f.t("ov.inputs_title"), 2)  # type: ignore[attr-defined]
+    doc.add_paragraph(f.t("ov.inputs_text"))  # type: ignore[attr-defined]
+    _grid(doc, ["#", f.t("ov.input"), f.t("value"), f.t("ov.origin"), f.t("ov.asme_use")],
+          [[str(i), label(r.key, es), value_text(r.key, r.value, r.kind, q, n),
+            label(r.source, es), label(r.use, es)]
+           for i, r in enumerate(input_rows(ev, rep.record.auto_properties), start=1)])
+    cases = calculated_results(ev)
+    if cases:
+        doc.add_heading(f.t("res.calculated"), 2)  # type: ignore[attr-defined]
+        head = ["", ""]
+        for c in cases:
+            head += [f.scope(c.scope), f.t("limit")]
+        rows = []
+        for i, row in enumerate(cases[0].rows):
+            line = [label(row.key, es), row.symbol]
+            for c in cases:
+                r = c.rows[i]
+                line += [value_text(r.key, r.value, r.kind, q, n), limit_text(r, q, n)]
+            rows.append(line)
+        _grid(doc, head, rows)
+    status = asme_status(ev)
+    if status:
+        doc.add_heading(f.t("res.asme_status"), 2)  # type: ignore[attr-defined]
+        _kv(doc, [(label(s.key, es), label(s.verdict, es) + (
+            f" (V/Ve = {f.num(s.ratio, 2)})" if s.ratio is not None else "")) for s in status])
+    doc.add_heading(f.t("res.convention"), 2)  # type: ignore[attr-defined]
+    _kv(doc, [(label(k, es), f.q(v, QuantityKind.LENGTH)) for k, v in length_convention(ev)])
+    doc.add_paragraph(f.t("res.convention_note"))  # type: ignore[attr-defined]

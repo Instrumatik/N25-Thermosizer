@@ -45,6 +45,18 @@ SCOPE_NAMES: Final[dict[str, tuple[str, str]]] = {
 }
 
 TEXT: Final[dict[str, tuple[str, str]]] = {
+    "ov.inputs_title": ("Datos de entrada principales", "Main input data"),
+    "ov.inputs_text": (
+        "Los 15 datos de la planilla de referencia, con su valor en este tag, de dónde sale "
+        "(cargado por el usuario o calculado por el programa) y si interviene en la "
+        "verificación ASME PTC 19.3 TW o solo en las recomendaciones.",
+        "The 15 inputs of the reference spreadsheet, with their value for this tag, where "
+        "they come from (entered by the user or calculated by the program) and whether they "
+        "enter the ASME PTC 19.3 TW verification or only the recommendations."),
+    "ov.title": ("2. Resumen de la verificación", "2. Verification summary"),
+    "ov.input": ("Dato", "Input"),
+    "ov.origin": ("Origen", "Source"),
+    "ov.asme_use": ("Cálculo ASME", "ASME calculation"),
     "ds.title": ("HOJA DE DATOS — TERMOPOZO", "THERMOWELL DATASHEET"),
     "memo.title": ("MEMORIA DE CÁLCULO — TERMOPOZO", "THERMOWELL CALCULATION REPORT"),
     "summary.title": ("RESUMEN DEL PROYECTO — TERMOPOZOS", "PROJECT SUMMARY — THERMOWELLS"),
@@ -116,15 +128,15 @@ TEXT: Final[dict[str, tuple[str, str]]] = {
         "cited; the text of the standard is not reproduced. All flow cases are evaluated and, "
         "when applicable, the variants with corrosion allowance consumed at root and tip "
         "(para. 6-2)."),
-    "m.inputs": ("2. Datos de entrada", "2. Input data"),
-    "m.material": ("3. Propiedades del material", "3. Material properties"),
-    "m.options": ("4. Opciones de cálculo", "4. Calculation options"),
-    "m.summary": ("5. Resumen de verificaciones", "5. Check summary"),
-    "m.cases": ("6. Resumen por caso", "6. Case summary"),
-    "m.trace": ("7. Desarrollo del cálculo", "7. Detailed calculation"),
-    "m.charts": ("8. Sensibilidad", "8. Sensitivity"),
-    "m.extra": ("9. Criterios adicionales", "9. Additional criteria"),
-    "m.notes": ("10. Notas y advertencias", "10. Notes and warnings"),
+    "m.inputs": ("3. Datos de entrada", "3. Input data"),
+    "m.material": ("4. Propiedades del material", "4. Material properties"),
+    "m.options": ("5. Opciones de cálculo", "5. Calculation options"),
+    "m.summary": ("6. Resumen de verificaciones", "6. Check summary"),
+    "m.cases": ("7. Resumen por caso", "7. Case summary"),
+    "m.trace": ("8. Desarrollo del cálculo", "8. Detailed calculation"),
+    "m.charts": ("9. Sensibilidad", "9. Sensitivity"),
+    "m.extra": ("10. Criterios adicionales", "10. Additional criteria"),
+    "m.notes": ("11. Notas y advertencias", "11. Notes and warnings"),
     "m.common": ("Valores comunes", "Common values"),
     "criterion": ("Criterio", "Criterion"), "value": ("Valor", "Value"),
     "limit": ("Límite", "Limit"), "margin": ("Margen", "Margin"),
