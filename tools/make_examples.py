@@ -87,7 +87,7 @@ def gas_failing() -> TagRecord:
     """Ejemplo 3: gas natural a alta velocidad con vástago largo y delgado; NO cumple."""
     base = default_input("TW-301")
     geom = base.thermowell.geometry.model_copy(update={
-        "L": 0.400, "A": 0.75 * INCH_M, "B": 0.625 * INCH_M})
+        "L": 0.400, "U": 0.400, "A": 0.75 * INCH_M, "B": 0.625 * INCH_M})
     well = base.thermowell.model_copy(update={
         "geometry": geom,
         "connection": base.thermowell.connection.model_copy(update={"rating_class": 600})})
@@ -99,7 +99,8 @@ def gas_failing() -> TagRecord:
                  "design_temperature": _celsius(60),
                  "flow_cases": (FlowCase(label="max", basis=FlowBasis.VELOCITY,
                                          velocity=30.0),)},
-        pipe={"nominal_size": "12", "schedule": "40", "inner_diameter": 0.30323},  # 12" sch 40,
+        pipe={"nominal_size": "12", "schedule": "40", "inner_diameter": 0.30323,  # 12" sch 40
+              "nozzle_length": 0.150},
     )
     return TagRecord(input=inp.model_copy(update={"thermowell": well}))
 

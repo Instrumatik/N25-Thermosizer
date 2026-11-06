@@ -10,10 +10,16 @@ from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from reportlab.platypus.flowables import Flowable
 
+from thermowell_sizer.core.advisories import AdvisoryLevel
 from thermowell_sizer.core.analysis.sensitivity import max_allowable_velocity
 from thermowell_sizer.core.models import CheckStatus, ConnectionType
 from thermowell_sizer.core.units import QuantityKind
-from thermowell_sizer.reports.common import STATUS_RGB, TagReport
+from thermowell_sizer.reports.common import (
+    STATUS_RGB,
+    TagReport,
+    advisory_lines,
+    inspection_lines,
+)
 from thermowell_sizer.reports.drawing import thermowell_drawing
 from thermowell_sizer.reports.pdfbase import (
     FONT,
@@ -34,6 +40,9 @@ from thermowell_sizer.reports.pdfbase import (
 LEFT_W = 112 * mm
 RIGHT_W = PAGE_W - 2 * MARGIN - LEFT_W - 3 * mm
 Row = tuple[str, str]
+LEVEL_MARK = {AdvisoryLevel.CRITICAL: "<font color='#c0392b'>■</font>",
+              AdvisoryLevel.WARNING: "<font color='#d68910'>▲</font>",
+              AdvisoryLevel.INFO: "<font color='#2e86c1'>●</font>"}
 
 
 def enum_name(rep: TagReport, value: str) -> str:
@@ -76,6 +85,8 @@ def sections(rep: TagReport) -> list[tuple[str, list[Row]]]:
                                   and c.basis.value == "velocity" else
                                   f.q(c.mass_flow, QuantityKind.MASS_FLOW)
                                   if c.basis.value == "mass_flow" else
+                                  f.q(c.standard_volume_flow, QuantityKind.STANDARD_VOLUME_FLOW)
+                                  if c.basis.value == "standard_volume_flow" else
                                   f.q(c.volume_flow, QuantityKind.VOLUME_FLOW))
         for c in proc.flow_cases)
     return [
@@ -229,8 +240,7 @@ def build_datasheet(rep: TagReport, path: Path) -> Path:
                             author="InstruMatik · ThermoWell Sizer")
     left = _kv_table(sections(rep), LEFT_W)
     inp = rep.evaluation.input
-    drawing = thermowell_drawing(inp.thermowell.geometry, inp.thermowell.connection.type, f,
-                                 RIGHT_W, 58 * mm)
+    drawing = thermowell_drawing(inp, f, RIGHT_W, 72 * mm)
     calc = _kv_table([(f.t("sec.calc"), calc_rows(rep))], RIGHT_W, start=100, label_ratio=0.55)
     status = rep.evaluation.status
     right = Table([[drawing], [Spacer(1, 2 * mm)], [calc], [Spacer(1, 3 * mm)],
@@ -251,6 +261,15 @@ def build_datasheet(rep: TagReport, path: Path) -> Path:
                              Paragraph(f"<b>{f.t('sec.notes')}</b>", STYLES["body"])]
     story += [Paragraph(f"{i}. {n}", STYLES["small"]) for i, n in enumerate(notes, 1)] or [
         Paragraph("—", STYLES["small"])]
+    advice = advisory_lines(rep)
+    if advice:
+        story += [Spacer(1, 2 * mm), Paragraph(f"<b>{f.t('adv.title')}</b>", STYLES["body"])]
+        story += [Paragraph(f"{LEVEL_MARK[level]} {escape(text)}", STYLES["small"])
+                  for level, text in advice]
+    story += [Spacer(1, 2 * mm), Paragraph(f"<b>{f.t('insp.title')}</b>", STYLES["body"])]
+    story.append(Paragraph("&nbsp;&nbsp;&nbsp;".join(f"☐ {escape(text)}"
+                                       for text in inspection_lines(rep, short=True)),
+                           STYLES["small"]))
     story += [Spacer(1, 3 * mm), signature_table(rep, PAGE_W - 2 * MARGIN)]
 
     def decorate(c: NumberedCanvas, page: int, total: int) -> None:

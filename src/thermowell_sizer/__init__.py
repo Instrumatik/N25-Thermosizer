@@ -1,6 +1,6 @@
 """ThermoWell Sizer: dimensionamiento y verificación de termopozos (ASME PTC 19.3 TW-2016)."""
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 DISCLAIMER_ES = (
     "Los resultados deben ser revisados por un ingeniero calificado y no sustituyen "

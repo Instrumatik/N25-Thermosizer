@@ -36,12 +36,14 @@
               "basis": "velocity",
               "mass_flow": null,
               "volume_flow": null,
+              "standard_volume_flow": null,
               "velocity": 2.0
             }
           ],
           "properties": {
             "density": 972.0,
             "dynamic_viscosity": 0.00035,
+            "standard_density": null,
             "source": "user",
             "source_note": ""
           },
@@ -61,7 +63,8 @@
           "material_id": "",
           "orientation": "perpendicular",
           "insulation_thickness": 0.0,
-          "nozzle_length": 0.0
+          "nozzle_length": 0.0,
+          "nozzle_inner_diameter": null
         },
         "thermowell": {
           "geometry": {

@@ -228,3 +228,40 @@ def test_smoke_test_mode(window: MainWindow) -> None:
     from thermowell_sizer.ui.app import smoke_test
 
     assert smoke_test(window) == 0
+
+
+def test_design_dialog_applies_typical_and_profile(window: MainWindow,
+                                                   tmp_path: Path) -> None:
+    from thermowell_sizer.ui.design_ui import DesignDialog
+
+    STATE.data_folder = tmp_path
+    (tmp_path / "perfiles").mkdir()
+    examples = Path(__file__).resolve().parents[1] / "examples"
+    (tmp_path / "perfiles" / "ejemplo.json").write_text(
+        (examples / "perfil_ejemplo.json").read_text(encoding="utf-8"), encoding="utf-8")
+    try:
+        editor = window.editor
+        dlg = DesignDialog(editor.design_context(), window)
+        assert dlg.choice is not None
+        editor.apply_design(dlg.choice)
+        inp = editor.to_input()
+        assert inp is not None
+        assert pytest.approx(dlg.choice.U) == inp.thermowell.geometry.U
+        dlg.c_source.setCurrentIndex(dlg.c_source.findData("ejemplo"))
+        assert dlg.c_model.isVisibleTo(dlg)
+        assert dlg.choice is not None and dlg.choice.model
+        editor.apply_design(dlg.choice)
+        inp = editor.to_input()
+        assert inp is not None
+        assert inp.thermowell.geometry.d == pytest.approx(0.0066)
+    finally:
+        STATE.data_folder = None
+
+
+def test_library_reference_tab(window: MainWindow, library: Library) -> None:
+    from thermowell_sizer.ui.library_ui import LibraryWindow
+
+    dlg = LibraryWindow(library, window)
+    assert dlg.ref_list.count() >= 8
+    dlg.ref_list.setCurrentRow(4)
+    assert "<table" in dlg.ref_view.toHtml()

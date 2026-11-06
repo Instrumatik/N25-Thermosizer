@@ -1,9 +1,9 @@
 ; Instalador de Windows de ThermoWell Sizer (Inno Setup 6).
-;   iscc /DAppVersion=1.0.0 packaging\installer.iss
+;   iscc /DAppVersion=1.1.0 packaging\installer.iss
 ; Toma la carpeta generada por PyInstaller en dist\ThermoWellSizer.
 
 #ifndef AppVersion
-  #define AppVersion "1.0.0"
+  #define AppVersion "1.1.0"
 #endif
 
 [Setup]
@@ -37,7 +37,9 @@ Name: "assoc"; Description: "Asociar archivos .tws con ThermoWell Sizer"; GroupD
 [Files]
 Source: "..\dist\ThermoWellSizer\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\examples\*.tws"; DestDir: "{app}\ejemplos"; Flags: ignoreversion
+Source: "..\examples\perfil_ejemplo.json"; DestDir: "{app}\ejemplos"; Flags: ignoreversion
 Source: "..\docs\manual-usuario.md"; DestDir: "{app}\docs"; Flags: ignoreversion
+Source: "..\docs\perfiles-cliente.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\ThermoWell Sizer"; Filename: "{app}\ThermoWellSizer.exe"

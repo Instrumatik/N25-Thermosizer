@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import Final
 
 # --- Definiciones exactas (NIST SP 811, apéndice B) ---------------------------------
 INCH_M = 0.0254
@@ -44,6 +45,11 @@ FAHRENHEIT_OFFSET = 459.67
 """T[°R] = T[°F] + 459,67 (exacto)."""
 SECONDS_PER_HOUR = 3600.0
 SECONDS_PER_MINUTE = 60.0
+SECONDS_PER_DAY = 86_400.0
+NORMAL_TO_STANDARD: Final = 288.15 / 273.15
+"""1 Nm³ (0 °C) en Sm³ (15 °C), gas ideal a la misma presión de 101,325 kPa."""
+SCF_TO_SM3: Final = FOOT_M**3 * 288.15 / (60.0 + FAHRENHEIT_OFFSET) * RANKINE_PER_KELVIN
+"""1 pie³ estándar (60 °F, 14,696 psia) en Sm³ (15 °C, 101,325 kPa), gas ideal."""
 
 
 class UnitSystem(StrEnum):
@@ -67,6 +73,7 @@ class QuantityKind(StrEnum):
     VELOCITY = "velocity"
     MASS_FLOW = "mass_flow"
     VOLUME_FLOW = "volume_flow"
+    STANDARD_VOLUME_FLOW = "standard_volume_flow"
     STRESS = "stress"
     ELASTIC_MODULUS = "elastic_modulus"
     FREQUENCY = "frequency"
@@ -114,6 +121,7 @@ DEFAULT_UNITS: dict[UnitSystem, dict[QuantityKind, LinearUnit]] = {
         QuantityKind.VELOCITY: LinearUnit("m/s", 1.0),
         QuantityKind.MASS_FLOW: LinearUnit("kg/h", 1.0 / SECONDS_PER_HOUR),
         QuantityKind.VOLUME_FLOW: LinearUnit("m³/h", 1.0 / SECONDS_PER_HOUR),
+        QuantityKind.STANDARD_VOLUME_FLOW: LinearUnit("Sm³/h", 1.0 / SECONDS_PER_HOUR),
         QuantityKind.STRESS: LinearUnit("MPa", 1.0e6),
         QuantityKind.ELASTIC_MODULUS: LinearUnit("GPa", 1.0e9),
         QuantityKind.FREQUENCY: LinearUnit("Hz", 1.0),
@@ -135,6 +143,7 @@ DEFAULT_UNITS: dict[UnitSystem, dict[QuantityKind, LinearUnit]] = {
         QuantityKind.VELOCITY: LinearUnit("ft/s", FOOT_M),
         QuantityKind.MASS_FLOW: LinearUnit("lb/h", POUND_KG / SECONDS_PER_HOUR),
         QuantityKind.VOLUME_FLOW: LinearUnit("gpm", US_GALLON_M3 / SECONDS_PER_MINUTE),
+        QuantityKind.STANDARD_VOLUME_FLOW: LinearUnit("SCFM", SCF_TO_SM3 / SECONDS_PER_MINUTE),
         QuantityKind.STRESS: LinearUnit("ksi", 1.0e3 * PSI_PA),
         QuantityKind.ELASTIC_MODULUS: LinearUnit("Mpsi", 1.0e6 * PSI_PA),
         QuantityKind.FREQUENCY: LinearUnit("Hz", 1.0),

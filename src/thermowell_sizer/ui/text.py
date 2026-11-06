@@ -131,6 +131,7 @@ UI: Final[dict[str, tuple[str, str]]] = {
     "f.auto_props": ("Calcular ρ y μ con CoolProp / biblioteca",
                      "Compute ρ and μ with CoolProp / library"),
     "f.density": ("Densidad", "Density"),
+    "f.std_density": ("Densidad estándar (15 °C, 1 atm)", "Standard density (15 °C, 1 atm)"),
     "f.viscosity": ("Viscosidad dinámica", "Dynamic viscosity"),
     "f.prop_source": ("Fuente", "Source"),
     "f.flow_cases": ("Casos de flujo", "Flow cases"),
@@ -152,6 +153,7 @@ UI: Final[dict[str, tuple[str, str]]] = {
     "f.orientation": ("Orientación", "Orientation"),
     "f.insulation": ("Espesor de aislamiento", "Insulation thickness"),
     "f.nozzle": ("Longitud de tobera", "Nozzle length"),
+    "f.nozzle_id": ("Diámetro interno de tobera (opcional)", "Nozzle inside diameter (optional)"),
     "f.dimensions": ("Dimensiones", "Dimensions"),
     "f.profile": ("Perfil del vástago", "Shank profile"),
     "f.connection": ("Conexión", "Connection"),
@@ -178,6 +180,53 @@ UI: Final[dict[str, tuple[str, str]]] = {
     "f.spring": ("Con resorte", "Spring loaded"),
     "f.sensor_mass": ("Masa del sensor (vacío = estimar)", "Sensor mass (blank = estimate)"),
     "f.none": ("(ninguno)", "(none)"),
+    "lib.references": ("Referencias", "References"),
+    # Diseños típicos y perfiles de cliente
+    "des.button": ("Diseño típico / especificación…", "Typical design / specification…"),
+    "des.title": ("Diseño típico o modelo de especificación", "Typical design or spec model"),
+    "des.source": ("Origen", "Source"),
+    "des.generic": ("Catálogo genérico (valores típicos)", "Generic catalog (typical values)"),
+    "des.design": ("Ejecución", "Design"),
+    "des.size": ("Tamaño de conexión", "Connection size"),
+    "des.bore": ("Agujero d", "Bore d"),
+    "des.u": ("Largo de inserción U", "Insertion length U"),
+    "des.u_rec": ("{u} (recomendado para esta línea)", "{u} (recommended for this line)"),
+    "des.model": ("Modelo", "Model"),
+    "des.auto_model": ("Modelo según la tabla del perfil: {model} (línea {nps}\")",
+                       "Model from the profile table: {model} ({nps}\" line)"),
+    "des.no_rule": ("El perfil no tiene tabla para esta conexión, rating y montaje: "
+                    "elija el modelo a mano.",
+                    "The profile has no table for this connection, rating and mounting: "
+                    "pick the model by hand."),
+    "des.no_nps": ("Elija el NPS de la línea en el paso Tubería para la selección "
+                   "automática.", "Pick the line NPS in the Pipe step for automatic "
+                   "selection."),
+    "des.line_too_small": ("La línea es menor que {nps}\": el perfil pide ampliar la "
+                           "línea en el punto de medición.",
+                           "The line is smaller than {nps}\": the profile asks for a "
+                           "larger line at the measuring point."),
+    "des.not_allowed": ("Este montaje no está permitido por el perfil en una línea de "
+                        "{nps}\".", "This mounting is not allowed by the profile on a "
+                        "{nps}\" line."),
+    "des.no_nozzle": ("Sin longitud de tobera en el paso Tubería: U se recomienda desde la "
+                      "pared interna. Cárguela para que U la incluya.",
+                      "No nozzle length in the Pipe step: U is recommended from the inner "
+                      "wall. Enter it so that U includes it."),
+    "des.import": ("Importar perfil…", "Import profile…"),
+    "des.import_err": ("No se pudo cargar el perfil:\n{err}", "Could not load profile:\n{err}"),
+    "des.short_for_design": ("U es corto para un vástago escalonado; considere cónico.",
+                             "U is short for a stepped shank; consider tapered."),
+    "des.summary": ("Se cargará: {profile}, {conn} {size}, U = L = {U}, A = {A}, B = {B}, "
+                    "d = {d}, t = {t}{extra}. L0 = {L0} (tobera).",
+                    "Will load: {profile}, {conn} {size}, U = L = {U}, A = {A}, B = {B}, "
+                    "d = {d}, t = {t}{extra}. L0 = {L0} (nozzle)."),
+    "des.disclaimer": ("Valores típicos de la industria: confirme las cotas con el plano "
+                       "del fabricante. El programa verifica la geometría con ASME PTC 19.3 "
+                       "TW al aplicar.",
+                       "Typical industry values: confirm dimensions with the manufacturer's "
+                       "drawing. The program verifies the geometry against ASME PTC 19.3 TW "
+                       "on apply."),
+    "des.apply": ("Aplicar al tag", "Apply to tag"),
     # Opciones
     "opt.title": ("Opciones de cálculo", "Calculation options"),
     "opt.damping": ("Amortiguamiento ζ", "Damping ζ"),
@@ -208,6 +257,7 @@ UI: Final[dict[str, tuple[str, str]]] = {
     "res.alternatives": ("Alternativas", "Alternatives"),
     "res.not_calculated": ("Sin calcular", "Not calculated"),
     "res.apply": ("Aplicar al tag", "Apply to tag"),
+    "res.advice": ("Recomendaciones", "Recommendations"),
     "res.no_alternatives": ("No se encontraron alternativas que cumplan.",
                             "No passing alternatives found."),
     "res.chart": ("Gráficas", "Charts"),
@@ -363,6 +413,7 @@ ENUM_TEXT: Final[dict[str, tuple[str, str]]] = {
     "two_phase": ("Bifásico", "Two-phase"),
     "mass_flow": ("Caudal másico", "Mass flow"), "volume_flow": ("Caudal volumétrico",
                                                                   "Volume flow"),
+    "standard_volume_flow": ("Caudal estándar (15 °C)", "Standard flow (15 °C)"),
     "velocity": ("Velocidad", "Velocity"),
     "straight": ("Recto", "Straight"), "tapered": ("Cónico", "Tapered"),
     "stepped": ("Escalonado", "Stepped"),

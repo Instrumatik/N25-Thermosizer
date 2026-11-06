@@ -3,17 +3,18 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date
 from typing import Final
 
 from thermowell_sizer import DISCLAIMER_EN, DISCLAIMER_ES, __version__
+from thermowell_sizer.core.advisories import Advisory, AdvisoryLevel, inspection_plan
 from thermowell_sizer.core.models import CheckStatus
 from thermowell_sizer.core.units import QuantityKind, UnitSystem, to_display
 from thermowell_sizer.data.database import Library
 from thermowell_sizer.i18n import Language, format_number, tr
 from thermowell_sizer.project import Project, TagRecord
-from thermowell_sizer.services import Evaluation, evaluate
+from thermowell_sizer.services import Evaluation, evaluate, render_advisory
 
 SIGNIFICANT: Final = 5
 SCI_LOW: Final = 1e-3
@@ -168,7 +169,14 @@ class Fmt:
         """Texto del reporte (o del catálogo general)."""
         pair = TEXT.get(key)
         if pair is None:
-            return tr(key, self.lang, **params)
+            text = tr(key, self.lang, **params)
+            if text != key:
+                return text
+            from thermowell_sizer.ui.text import UI  # textos compartidos con la interfaz
+
+            pair = UI.get(key)
+            if pair is None:
+                return key
         text = pair[0] if self.lang is Language.ES else pair[1]
         return text.format(**params) if params else text
 
@@ -278,3 +286,26 @@ def current_revision(project: Project) -> tuple[str, str]:
         last = project.info.revisions[-1]
         return last.rev, last.date.isoformat()
     return "0", date.today().isoformat()
+
+
+def _render(rep: TagReport, adv: Advisory) -> str:
+    f = rep.fmt
+
+    def qfmt(value: float, kind: QuantityKind) -> str:
+        return f.pressure(value) if kind is QuantityKind.PRESSURE else f.q(value, kind)
+
+    return render_advisory(adv, f.lang, qfmt, f.num)
+
+
+def advisory_lines(rep: TagReport) -> list[tuple[AdvisoryLevel, str]]:
+    """Advertencias y recomendaciones traducidas (la prueba hidráulica va en ensayos)."""
+    return [(a.level, _render(rep, a)) for a in rep.evaluation.advisories
+            if a.key != "adv.hydro_test"]
+
+
+def inspection_lines(rep: TagReport, *, short: bool = False) -> list[str]:
+    """Ensayos y documentación sugeridos, ya traducidos (``short``: versión resumida)."""
+    plan = inspection_plan(rep.evaluation.input)
+    if short:
+        plan = [replace(a, key=f"{a.key}_short") for a in plan]
+    return [_render(rep, a) for a in plan]

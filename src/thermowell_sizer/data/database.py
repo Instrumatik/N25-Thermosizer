@@ -20,7 +20,7 @@ from thermowell_sizer.core.models import FatigueClass, MaterialProperties
 from thermowell_sizer.core.units import BAR_PA, INCH_M, KELVIN_OFFSET
 from thermowell_sizer.data import seed_library, seed_materials, seed_tables
 
-SEED_VERSION = "2026.11.1"
+SEED_VERSION = "2026.11.3"
 GPA = 1.0e9
 MPA = 1.0e6
 MPA_S = 1.0e-3

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "thermowell-sizer"
-version = "1.0.0"
+version = "1.1.0"
 description = "Dimensionamiento y verificación de termopozos según ASME PTC 19.3 TW-2016"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -74,3 +74,5 @@ ignore = ["D203", "D213", "D105", "D107", "D413", "RUF001", "RUF002", "RUF003"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["D", "N802", "N803", "N806"]
+# Las cotas llevan el nombre de la norma (U, L, A, B, Ls)
+"src/thermowell_sizer/core/designs.py" = ["N803", "N806"]
