@@ -45,6 +45,7 @@ from thermowell_sizer.data.database import Library
 from thermowell_sizer.data.fluid_groups import FLUID_TYPES, TYPES_BY_ID, fluid_label, type_for
 from thermowell_sizer.i18n import tr
 from thermowell_sizer.ui.design_ui import DesignContext, DesignDialog
+from thermowell_sizer.ui.infocard_ui import InfoButton, add_info_buttons, info_label, with_info
 from thermowell_sizer.ui.state import STATE
 from thermowell_sizer.ui.text import enum_text, t
 from thermowell_sizer.ui.widgets import EnumCombo, QuantityEdit, fmt, fmt_quantity
@@ -171,6 +172,10 @@ class TagEditor(QWidget):
         self.flow_rows: list[FlowCaseRow] = []
         self.pages = [self._page_identification(), self._page_process(), self._page_pipe(),
                       self._page_thermowell(), self._page_sensor()]
+        self.info_keys: list[str] = []
+        for page in self.pages:
+            for form in page.findChildren(QFormLayout):
+                self.info_keys += add_info_buttons(form)
 
         self.steps = QListWidget()
         self.steps.setMaximumWidth(150)
@@ -297,7 +302,9 @@ class TagEditor(QWidget):
         self.cases_layout = QVBoxLayout(cases)
         head = QHBoxLayout()
         for key in ("f.case", "f.basis", "f.value"):
-            head.addWidget(QLabel(f"<b>{t(key)}</b>"), 2 if key == "f.value" else 1)
+            head.addWidget(with_info(QLabel(f"<b>{t(key)}</b>"), key),
+                           2 if key == "f.value" else 1)
+        head.addWidget(InfoButton("f.flow_cases"))
         head.addSpacing(28)
         self.cases_layout.addLayout(head)
         self.btn_add_case = QPushButton(t("f.add_case"))
@@ -311,16 +318,16 @@ class TagEditor(QWidget):
         self.chk_erosive = QCheckBox(t("f.erosive"))
         for chk in (self.chk_nace, self.chk_erosive):
             chk.toggled.connect(self._emit)
-        g.addWidget(QLabel(t("f.h2s")), 0, 0)
+        g.addWidget(info_label(t("f.h2s"), "f.h2s"), 0, 0)
         g.addWidget(self._q("h2s", QuantityKind.PRESSURE, minimum=0.0, optional=True), 0, 1)
-        g.addWidget(QLabel(t("f.chlorides")), 1, 0)
+        g.addWidget(info_label(t("f.chlorides"), "f.chlorides"), 1, 0)
         self.e_chlorides = self._line()
         g.addWidget(self.e_chlorides, 1, 1)
-        g.addWidget(QLabel(t("f.ph")), 2, 0)
+        g.addWidget(info_label(t("f.ph"), "f.ph"), 2, 0)
         self.e_ph = self._line()
         g.addWidget(self.e_ph, 2, 1)
-        g.addWidget(self.chk_nace, 3, 0, 1, 2)
-        g.addWidget(self.chk_erosive, 4, 0, 1, 2)
+        g.addWidget(with_info(self.chk_nace, "f.nace"), 3, 0, 1, 2)
+        g.addWidget(with_info(self.chk_erosive, "f.erosive"), 4, 0, 1, 2)
         lay.addWidget(corr)
         lay.addStretch(1)
         return page

@@ -104,7 +104,8 @@ def mount_diagram(lang: str = "es") -> bytes:
 
 def curve_png(xs: list[float], series: list[tuple[str, list[float], str]], *, xlabel: str,
               ylabel: str, title: str, marks: list[tuple[float, float, str]] | None = None,
-              hlines: list[tuple[float, str]] | None = None, logx: bool = False) -> bytes:
+              hlines: list[tuple[float, str]] | None = None, logx: bool = False,
+              logy: bool = False, ylim: tuple[float, float] | None = None) -> bytes:
     """Curva genérica con series, puntos marcados y líneas de límite."""
     fig, ax = plt.subplots(figsize=(5.2, 3.0))
     for label, ys, color in series:
@@ -118,6 +119,10 @@ def curve_png(xs: list[float], series: list[tuple[str, list[float], str]], *, xl
                     color=ACCENT)
     if logx:
         ax.set_xscale("log")
+    if logy:
+        ax.set_yscale("log")
+    if ylim is not None:
+        ax.set_ylim(*ylim)
     ax.set_xlabel(xlabel, fontsize=8)
     ax.set_ylabel(ylabel, fontsize=8)
     ax.set_title(title, fontsize=9)
@@ -142,3 +147,159 @@ def sample(fn: Callable[[float], float], lo: float, hi: float, n: int = 120,
         except (ValueError, ZeroDivisionError, OverflowError):
             ys.append(math.nan)
     return xs, ys
+
+
+_TW_TEXT = {
+    "es": {"L": "L · largo no soportado", "U": "U · inserción", "A": "Ø A raíz",
+           "B": "Ø B punta", "d": "Ø d agujero", "t": "t punta", "b": "b radio",
+           "Ls": "Ls escalón", "bs": "bs radio escalón", "T_lag": "T lag",
+           "L0": "L0 zona protegida", "ca": "sobreespesor", "flow": "flujo",
+           "flange": "brida", "title": "Termopozo: cota resaltada"},
+    "en": {"L": "L · unsupported length", "U": "U · insertion", "A": "Ø A root",
+           "B": "Ø B tip", "d": "Ø d bore", "t": "t tip", "b": "b fillet",
+           "Ls": "Ls step", "bs": "bs step fillet", "T_lag": "T lag",
+           "L0": "L0 shielded zone", "ca": "corrosion allowance", "flow": "flow",
+           "flange": "flange", "title": "Thermowell: highlighted dimension"},
+}
+THERMOWELL_DIMENSIONS = ("L", "U", "A", "B", "d", "t", "b", "Ls", "bs", "T_lag", "L0", "ca")
+
+
+@lru_cache(maxsize=64)
+def thermowell_diagram(highlight: str = "", lang: str = "es") -> bytes:
+    """Termopozo cónico esquemático con todas las cotas y una resaltada en rojo."""
+    tx = _TW_TEXT["es" if lang == "es" else "en"]
+    fig, ax = plt.subplots(figsize=(6.4, 3.0))
+    ax.set_aspect("equal")
+    ax.axis("off")
+
+    def col(key: str) -> str:
+        return ACCENT if key == highlight else "#8a929c"
+
+    # brida y cuerpo (eje horizontal; la punta a la derecha)
+    ax.add_patch(Rectangle((-0.6, -1.4), 0.6, 2.8, fc=METAL, ec=INK, lw=0.8))
+    ax.text(-0.3, 1.55, tx["flange"], ha="center", fontsize=7)
+    lag = 0.8
+    ax.add_patch(Rectangle((0, -0.55), lag, 1.1, fc=METAL, ec=INK, lw=0.8))
+    root, tip, length = 0.5, 0.33, 7.0
+    x0 = lag
+    ax.add_patch(Polygon([(x0, root), (x0 + length, tip), (x0 + length, -tip), (x0, -root)],
+                         fc="#c9d3de", ec=INK, lw=0.9))
+    # agujero
+    bore = 0.13
+    ax.add_patch(Rectangle((-0.6, -bore), 0.6 + x0 + length - 0.35, 2 * bore, fc="white",
+                           ec=INK, lw=0.6, ls="--"))
+    # zona protegida (dentro de la brida de montaje) y sobreespesor
+    ax.add_patch(Rectangle((x0, root + 0.05), 1.4, 0.12, fc=col("L0"), ec="none", alpha=0.35))
+    ax.add_patch(Rectangle((x0 + 2.0, -root - 0.17), length - 2.0, 0.08, fc=col("ca"),
+                           ec="none", alpha=0.5))
+    ax.text(x0 + 4.5, -root - 0.45, tx["ca"], color=col("ca"), fontsize=7, ha="center")
+    # flujo
+    ax.annotate("", (x0 + 5.6, -1.9), (x0 + 5.6, -1.3),
+                arrowprops={"arrowstyle": "<-", "color": PIPE, "lw": 1.2})
+    ax.text(x0 + 5.75, -1.75, tx["flow"], color=PIPE, fontsize=7)
+    # cotas horizontales
+    _dim(ax, x0, x0 + length, 1.25, tx["L"], color=col("L"))
+    _dim(ax, 0, x0 + length, 1.85, tx["U"], color=col("U"))
+    _dim(ax, 0, x0, -0.95, tx["T_lag"], color=col("T_lag"))
+    _dim(ax, x0, x0 + 1.4, 0.75, tx["L0"], color=col("L0"))
+    _dim(ax, x0 + length - 0.35, x0 + length, 0.6, tx["t"], color=col("t"))
+    _dim(ax, x0 + 3.0, x0 + 4.2, -1.35, tx["Ls"], color=col("Ls"))
+    # cotas verticales (diámetros)
+    _dim(ax, -root, root, x0 + 0.25, tx["A"], color=col("A"), vertical=True)
+    _dim(ax, -tip, tip, x0 + length + 0.3, tx["B"], color=col("B"), vertical=True)
+    _dim(ax, -bore, bore, x0 + 2.4, tx["d"], color=col("d"), vertical=True)
+    ax.text(x0 + 0.15, -root - 0.3, tx["b"], color=col("b"), fontsize=7)
+    ax.text(x0 + 4.3, -1.3, tx["bs"], color=col("bs"), fontsize=7)
+    ax.set_xlim(-0.9, x0 + length + 2.4)
+    ax.set_ylim(-2.1, 2.4)
+    ax.set_title(tx["title"], fontsize=9)
+    return _png(fig)
+
+
+_ORIENT_TEXT = {
+    "es": ("Perpendicular", "Inclinado", "En codo", "flujo"),
+    "en": ("Perpendicular", "Inclined", "In an elbow", "flow"),
+}
+
+
+@lru_cache(maxsize=2)
+def orientation_diagram(lang: str = "es") -> bytes:
+    """Esquemas de instalación: perpendicular, inclinado y en codo."""
+    names = _ORIENT_TEXT["es" if lang == "es" else "en"]
+    fig, axes = plt.subplots(1, 3, figsize=(6.6, 2.3))
+    for ax, name in zip(axes, names[:3], strict=True):
+        ax.set_aspect("equal")
+        ax.axis("off")
+        ax.set_title(name, fontsize=8)
+    # perpendicular
+    a = axes[0]
+    a.add_patch(Rectangle((-2, -1), 4, 2, fc="#eef3fa", ec=INK, lw=0.8))
+    a.add_patch(Polygon([(-0.12, 1.6), (0.12, 1.6), (0.08, -0.2), (-0.08, -0.2)],
+                        fc="#c9d3de", ec=INK))
+    a.annotate("", (1.6, -0.6), (-1.6, -0.6), arrowprops={"arrowstyle": "->", "color": PIPE})
+    a.set_xlim(-2.2, 2.2)
+    a.set_ylim(-1.2, 1.8)
+    # inclinado (contra el flujo)
+    a = axes[1]
+    a.add_patch(Rectangle((-2, -1), 4, 2, fc="#eef3fa", ec=INK, lw=0.8))
+    a.add_patch(Polygon([(0.9, 1.6), (1.1, 1.5), (0.1, -0.3), (-0.05, -0.2)],
+                        fc="#c9d3de", ec=INK))
+    a.annotate("", (1.6, -0.6), (-1.6, -0.6), arrowprops={"arrowstyle": "->", "color": PIPE})
+    a.set_xlim(-2.2, 2.2)
+    a.set_ylim(-1.2, 1.8)
+    # en codo (punta enfrentando el flujo)
+    a = axes[2]
+    a.add_patch(Rectangle((-2, -1), 3, 2, fc="#eef3fa", ec=INK, lw=0.8))
+    a.add_patch(Rectangle((1, -1), 1.0, 2.8, fc="#eef3fa", ec=INK, lw=0.8))
+    a.add_patch(Polygon([(2.3, 0.12), (2.3, -0.12), (-0.2, -0.08), (-0.2, 0.08)],
+                        fc="#c9d3de", ec=INK))
+    a.annotate("", (0.6, 0.6), (-1.6, 0.6), arrowprops={"arrowstyle": "->", "color": PIPE})
+    a.text(-1.6, 0.7, names[3], fontsize=7, color=PIPE)
+    a.set_xlim(-2.2, 2.6)
+    a.set_ylim(-1.2, 1.9)
+    return _png(fig)
+
+
+_CONN_TEXT = {
+    "es": ("Roscada", "Bridada", "Para soldar", "Socket weld", "Van Stone", "Sanitaria"),
+    "en": ("Threaded", "Flanged", "Weld-in", "Socket weld", "Van Stone", "Sanitary"),
+}
+
+
+@lru_cache(maxsize=2)
+def connection_diagram(lang: str = "es") -> bytes:
+    """Esquema de los tipos de conexión al proceso."""
+    names = _CONN_TEXT["es" if lang == "es" else "en"]
+    fig, axes = plt.subplots(1, 6, figsize=(7.2, 2.0))
+    for ax, name in zip(axes, names, strict=True):
+        ax.set_aspect("equal")
+        ax.axis("off")
+        ax.set_title(name, fontsize=7)
+        ax.add_patch(Polygon([(-0.25, 0), (0.25, 0), (0.15, -2.4), (-0.15, -2.4)],
+                             fc="#c9d3de", ec=INK, lw=0.7))
+        ax.set_xlim(-1.2, 1.2)
+        ax.set_ylim(-2.6, 1.2)
+    # roscada: dientes
+    for i in range(6):
+        y = -0.1 - 0.12 * i
+        axes[0].plot([-0.45, -0.3, -0.45], [y, y - 0.06, y - 0.12], color=INK, lw=0.6)
+        axes[0].plot([0.45, 0.3, 0.45], [y, y - 0.06, y - 0.12], color=INK, lw=0.6)
+    axes[0].add_patch(Rectangle((-0.5, 0), 1.0, 0.4, fc=METAL, ec=INK, lw=0.7))
+    # bridada
+    axes[1].add_patch(Rectangle((-1.0, 0), 2.0, 0.3, fc=METAL, ec=INK, lw=0.7))
+    axes[1].add_patch(Rectangle((-0.35, 0.3), 0.7, 0.5, fc=METAL, ec=INK, lw=0.7))
+    # para soldar
+    axes[2].add_patch(Rectangle((-0.6, -0.2), 1.2, 0.3, fc="#b0b8c2", ec=INK, lw=0.7))
+    axes[2].plot([-0.6, -0.8], [-0.2, 0.1], color=ACCENT, lw=1.2)
+    axes[2].plot([0.6, 0.8], [-0.2, 0.1], color=ACCENT, lw=1.2)
+    # socket weld
+    axes[3].add_patch(Rectangle((-0.55, -0.6), 1.1, 0.9, fc=METAL, ec=INK, lw=0.7))
+    axes[3].plot([-0.55, -0.7], [0.3, 0.45], color=ACCENT, lw=1.2)
+    axes[3].plot([0.55, 0.7], [0.3, 0.45], color=ACCENT, lw=1.2)
+    # Van Stone: brida loca
+    axes[4].add_patch(Rectangle((-0.5, 0), 1.0, 0.2, fc="#b0b8c2", ec=INK, lw=0.7))
+    axes[4].add_patch(Rectangle((-1.0, 0.2), 2.0, 0.3, fc=METAL, ec=INK, lw=0.7))
+    # sanitaria (clamp)
+    axes[5].add_patch(Polygon([(-0.7, 0), (0.7, 0), (0.5, 0.35), (-0.5, 0.35)], fc=METAL,
+                              ec=INK, lw=0.7))
+    return _png(fig)

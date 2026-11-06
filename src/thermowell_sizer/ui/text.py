@@ -271,6 +271,10 @@ UI: Final[dict[str, tuple[str, str]]] = {
     "res.ref": ("Referencia", "Reference"),
     "res.summary": ("Resumen por caso", "Case summary"),
     "res.overview": ("Resumen ASME", "ASME overview"),
+    "res.card_hint": ("Doble clic (o clic en el encabezado ⓘ): abre la ficha con la explicación, "
+                      "las fórmulas y un ejemplo.",
+                      "Double-click (or click the ⓘ header): opens the card with the "
+                      "explanation, formulas and an example."),
     "res.asme_status": ("Estado ASME", "ASME status"),
     "res.calculated": ("Resultados calculados", "Calculated results"),
     "res.convention": ("Convención de largos: planilla y programa",

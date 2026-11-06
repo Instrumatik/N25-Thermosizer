@@ -23,6 +23,7 @@ from thermowell_sizer.core.units import QuantityKind
 from thermowell_sizer.i18n import Language
 from thermowell_sizer.project import ProjectInfo, ProjectSettings
 from thermowell_sizer.ui.assets import asset_path
+from thermowell_sizer.ui.infocard_ui import add_info_buttons
 from thermowell_sizer.ui.state import STATE
 from thermowell_sizer.ui.text import enum_text, t
 from thermowell_sizer.ui.widgets import QuantityEdit
@@ -86,6 +87,7 @@ class OptionsDialog(QDialog):
         f.addRow(self.inline)
         f.addRow(self.corr)
         f.addRow(self.supplier)
+        add_info_buttons(f)
         f.addRow(_buttons(self))
 
     def options(self) -> EngineOptions:
@@ -129,6 +131,7 @@ class ProjectDialog(QDialog):
         f.addRow(t("dlg.doc_number"), self.doc)
         f.addRow(t("dlg.barometric") + " (abs)", self.baro)
         f.addRow(self.gauge)
+        add_info_buttons(f)
         f.addRow(_buttons(self))
 
     def result_data(self) -> tuple[ProjectInfo, ProjectSettings]:

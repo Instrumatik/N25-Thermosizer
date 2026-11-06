@@ -49,6 +49,7 @@ from thermowell_sizer.project import (
     Project,
     ProjectFileError,
     ProjectInfo,
+    ProjectSettings,
     TagRecord,
     load_project,
     save_project,
@@ -64,6 +65,7 @@ from thermowell_sizer.services import (
 from thermowell_sizer.ui.charts import SensitivityChart
 from thermowell_sizer.ui.dialogs import AboutDialog, OptionsDialog, ProjectDialog
 from thermowell_sizer.ui.help import STEP_TOPICS, HelpWindow
+from thermowell_sizer.ui.infocard_ui import set_context, show_card
 from thermowell_sizer.ui.library_ui import LibraryWindow, MaterialAssistant, SearchPalette
 from thermowell_sizer.ui.preview import ThermowellPreview
 from thermowell_sizer.ui.results import ResultsPanel
@@ -137,6 +139,8 @@ class MainWindow(QMainWindow):
         self.dirty = False
         self.current = -1
         self.evaluations: dict[int, Evaluation] = {}
+        set_context(self._card_context, self._reference_evaluation)
+        self._reference: Evaluation | None = None
         self.undo = QUndoStack(self)
         self._restoring = False
         self.help_window: HelpWindow | None = None
@@ -938,10 +942,27 @@ class MainWindow(QMainWindow):
         self.library_window.show()
         self.library_window.raise_()
 
+    def _card_context(self) -> tuple[Evaluation | None, str]:
+        """Evaluación y tag actuales para los ejemplos de las fichas «ⓘ»."""
+        if self.current < 0:
+            return None, ""
+        ev = self.evaluations.get(self.current)
+        if ev is None:
+            ev = self.calculate()
+        return ev, self.project.tags[self.current].input.identification.tag
+
+    def _reference_evaluation(self) -> Evaluation | None:
+        """Caso de referencia de las fichas: la plantilla del programa."""
+        if self._reference is None:
+            self._reference = evaluate(TagRecord(input=default_input("REF")), self.library,
+                                       ProjectSettings())
+        return self._reference
+
     def open_search(self) -> None:
         """Buscador global."""
         dlg = SearchPalette(self.library, self)
-        dlg.selected.connect(lambda kind, ref: self.open_library(kind, (kind, ref)))
+        dlg.selected.connect(lambda kind, ref: show_card(ref, self) if kind == "card"
+                             else self.open_library(kind, (kind, ref)))
         dlg.exec()
 
     def open_assistant(self) -> None:
