@@ -23,7 +23,11 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from thermowell_sizer.core.designs import DesignChoice
+from thermowell_sizer.core.designs import (
+    CONNECTION_SIZES,
+    DesignChoice,
+    suggested_connection_size,
+)
 from thermowell_sizer.core.models import (
     CalcInput,
     ConnectionType,
@@ -38,11 +42,13 @@ from thermowell_sizer.core.models import (
 from thermowell_sizer.core.units import QuantityKind
 from thermowell_sizer.core.validation import Severity, validate_geometry
 from thermowell_sizer.data.database import Library
+from thermowell_sizer.data.fluid_groups import FLUID_TYPES, TYPES_BY_ID, fluid_label, type_for
 from thermowell_sizer.i18n import tr
 from thermowell_sizer.ui.design_ui import DesignContext, DesignDialog
+from thermowell_sizer.ui.infocard_ui import InfoButton, add_info_buttons, info_label, with_info
 from thermowell_sizer.ui.state import STATE
 from thermowell_sizer.ui.text import enum_text, t
-from thermowell_sizer.ui.widgets import EnumCombo, QuantityEdit, fmt
+from thermowell_sizer.ui.widgets import EnumCombo, QuantityEdit, fmt, fmt_quantity
 
 RATING_CLASSES = (150, 300, 600, 900, 1500, 2500)
 CASE_LABELS = ("min", "normal", "max")
@@ -55,7 +61,7 @@ BASIS_KIND = {
 STEP_KEYS = ("step.identification", "step.process", "step.pipe", "step.thermowell",
              "step.sensor")
 MAX_FLOW_CASES = 6
-CUSTOM_PIPE = "—"
+CUSTOM_PIPE = "Otro / Other"
 
 
 class FlowCaseRow(QWidget):
@@ -166,6 +172,10 @@ class TagEditor(QWidget):
         self.flow_rows: list[FlowCaseRow] = []
         self.pages = [self._page_identification(), self._page_process(), self._page_pipe(),
                       self._page_thermowell(), self._page_sensor()]
+        self.info_keys: list[str] = []
+        for page in self.pages:
+            for form in page.findChildren(QFormLayout):
+                self.info_keys += add_info_buttons(form)
 
         self.steps = QListWidget()
         self.steps.setMaximumWidth(150)
@@ -254,15 +264,21 @@ class TagEditor(QWidget):
         lay = QVBoxLayout(page)
         box = QGroupBox(t("step.process"))
         f = _form(box)
+        es = STATE.language.value == "es"
+        self._fluid_names = {fl.id: fl.name_es if es else fl.name_en
+                             for fl in self.library.fluids()}
+        self.c_ftype = QComboBox()
+        for ft in FLUID_TYPES:
+            self.c_ftype.addItem(ft.name[0] if es else ft.name[1], ft.id)
+        self.c_ftype.currentIndexChanged.connect(self._ftype_changed)
         self.c_fluid = QComboBox()
-        for fl in self.library.fluids():
-            self.c_fluid.addItem(fl.name_es if STATE.language.value == "es" else fl.name_en,
-                                 fl.id)
         self.c_fluid.currentIndexChanged.connect(self._emit)
         self.c_phase = EnumCombo(list(Phase))
-        self.c_phase.currentIndexChanged.connect(self._emit)
+        self.c_phase.setEnabled(False)
+        self._fill_fluids("")
+        f.addRow(t("f.fluid_type"), self.c_ftype)
         f.addRow(t("f.fluid"), self.c_fluid)
-        f.addRow(t("f.phase"), self.c_phase)
+        f.addRow(t("f.phase_calc"), self.c_phase)
         f.addRow(t("f.p_op"), self._q("p_op", QuantityKind.PRESSURE, gauge_capable=True))
         f.addRow(t("f.p_design"), self._q("p_design", QuantityKind.PRESSURE,
                                            gauge_capable=True))
@@ -286,7 +302,9 @@ class TagEditor(QWidget):
         self.cases_layout = QVBoxLayout(cases)
         head = QHBoxLayout()
         for key in ("f.case", "f.basis", "f.value"):
-            head.addWidget(QLabel(f"<b>{t(key)}</b>"), 2 if key == "f.value" else 1)
+            head.addWidget(with_info(QLabel(f"<b>{t(key)}</b>"), key),
+                           2 if key == "f.value" else 1)
+        head.addWidget(InfoButton("f.flow_cases"))
         head.addSpacing(28)
         self.cases_layout.addLayout(head)
         self.btn_add_case = QPushButton(t("f.add_case"))
@@ -300,16 +318,16 @@ class TagEditor(QWidget):
         self.chk_erosive = QCheckBox(t("f.erosive"))
         for chk in (self.chk_nace, self.chk_erosive):
             chk.toggled.connect(self._emit)
-        g.addWidget(QLabel(t("f.h2s")), 0, 0)
+        g.addWidget(info_label(t("f.h2s"), "f.h2s"), 0, 0)
         g.addWidget(self._q("h2s", QuantityKind.PRESSURE, minimum=0.0, optional=True), 0, 1)
-        g.addWidget(QLabel(t("f.chlorides")), 1, 0)
+        g.addWidget(info_label(t("f.chlorides"), "f.chlorides"), 1, 0)
         self.e_chlorides = self._line()
         g.addWidget(self.e_chlorides, 1, 1)
-        g.addWidget(QLabel(t("f.ph")), 2, 0)
+        g.addWidget(info_label(t("f.ph"), "f.ph"), 2, 0)
         self.e_ph = self._line()
         g.addWidget(self.e_ph, 2, 1)
-        g.addWidget(self.chk_nace, 3, 0, 1, 2)
-        g.addWidget(self.chk_erosive, 4, 0, 1, 2)
+        g.addWidget(with_info(self.chk_nace, "f.nace"), 3, 0, 1, 2)
+        g.addWidget(with_info(self.chk_erosive, "f.erosive"), 4, 0, 1, 2)
         lay.addWidget(corr)
         lay.addStretch(1)
         return page
@@ -324,12 +342,21 @@ class TagEditor(QWidget):
         self.c_sch.currentIndexChanged.connect(self._pipe_changed)
         f.addRow(t("f.nps"), self.c_nps)
         f.addRow(t("f.schedule"), self.c_sch)
+        f.addRow(t("f.pipe_od"), self._q("pipe_od", QuantityKind.DIAMETER, minimum=1e-4,
+                                          optional=True))
+        f.addRow(t("f.wall"), self._q("wall", QuantityKind.LENGTH, minimum=0.0, optional=True))
         f.addRow(t("f.pipe_id"), self._q("pipe_id", QuantityKind.DIAMETER, minimum=1e-4))
+        self.quantities["pipe_od"].changed.connect(self._custom_pipe_changed)
+        self.quantities["wall"].changed.connect(self._custom_pipe_changed)
         self.c_orient = EnumCombo(list(MountingOrientation))
         self.c_orient.currentIndexChanged.connect(self._emit)
         f.addRow(t("f.orientation"), self.c_orient)
         f.addRow(t("f.insulation"), self._q("insulation", QuantityKind.LENGTH, minimum=0.0))
-        f.addRow(t("f.nozzle"), self._q("nozzle", QuantityKind.LENGTH, minimum=0.0))
+        f.addRow(t("f.mount"), self._q("mount", QuantityKind.LENGTH, minimum=0.0))
+        self.l_mount = QLabel()
+        self.l_mount.setWordWrap(True)
+        self.l_mount.setObjectName("hintLabel")
+        f.addRow("", self.l_mount)
         f.addRow(t("f.nozzle_id"), self._q("nozzle_id", QuantityKind.DIAMETER, minimum=1e-4,
                                             optional=True))
         return _top(box)
@@ -343,7 +370,9 @@ class TagEditor(QWidget):
         self.c_profile.currentIndexChanged.connect(self._profile_changed)
         self.c_conn = EnumCombo(list(ConnectionType))
         self.c_conn.currentIndexChanged.connect(self._conn_changed)
-        self.e_conn_size = self._line()
+        self.e_conn_size = QComboBox()
+        self.e_conn_size.setEditable(True)
+        self.e_conn_size.currentTextChanged.connect(self._emit)
         self.c_rating = QComboBox()
         for r in RATING_CLASSES:
             self.c_rating.addItem(str(r), r)
@@ -362,10 +391,21 @@ class TagEditor(QWidget):
         f.addRow(t("f.profile"), self.c_profile)
         f.addRow(t("f.connection"), self.c_conn)
         f.addRow(t("f.conn_size"), self.e_conn_size)
+        self.l_size_hint = QLabel()
+        self.l_size_hint.setObjectName("hintLabel")
+        f.addRow("", self.l_size_hint)
         f.addRow(t("f.rating"), self.c_rating)
         f.addRow(t("f.face"), self.c_face)
         f.addRow(t("f.material"), self.c_material)
         f.addRow(t("f.coating"), self.c_coating)
+        f.addRow(t("f.E_manual"), self._q("mat_E", QuantityKind.ELASTIC_MODULUS, minimum=1e9,
+                                           optional=True))
+        f.addRow(t("f.S_manual"), self._q("mat_S", QuantityKind.STRESS, minimum=1e5,
+                                           optional=True))
+        self.l_mat_lib = QLabel()
+        self.l_mat_lib.setObjectName("hintLabel")
+        self.l_mat_lib.setWordWrap(True)
+        f.addRow("", self.l_mat_lib)
         right = QGroupBox(t("f.dimensions"))
         g = _form(right)
         self.geometry_rows: dict[str, QLabel] = {}
@@ -379,6 +419,10 @@ class TagEditor(QWidget):
             self.geometry_rows[key] = label
             optional = key in ("U",)
             g.addRow(label, self._q(f"g_{key}", kind, minimum=0.0, optional=optional))
+        self.l_u_breakdown = QLabel()
+        self.l_u_breakdown.setWordWrap(True)
+        self.l_u_breakdown.setObjectName("hintLabel")
+        g.addRow("", self.l_u_breakdown)
         self.btn_design = QPushButton(t("des.button"))
         self.btn_design.clicked.connect(self.open_design_dialog)
         lay.addWidget(self.btn_design)
@@ -440,6 +484,23 @@ class TagEditor(QWidget):
             self._update_enabled()
             self.changed.emit()
 
+    def _fill_fluids(self, current: str) -> None:
+        """Lista solo los fluidos del tipo elegido (con su sufijo de estado)."""
+        ftype = TYPES_BY_ID[str(self.c_ftype.currentData() or "liquid")]
+        es = STATE.language.value == "es"
+        self.c_fluid.blockSignals(True)
+        self.c_fluid.clear()
+        for fid, suffix in ftype.fluids:
+            if fid in self._fluid_names:
+                self.c_fluid.addItem(fluid_label(fid, self._fluid_names[fid], suffix, es), fid)
+        self.c_fluid.setCurrentIndex(max(self.c_fluid.findData(current), 0))
+        self.c_fluid.blockSignals(False)
+        self.c_phase.set_value(ftype.phase)
+
+    def _ftype_changed(self) -> None:
+        self._fill_fluids(str(self.c_fluid.currentData() or ""))
+        self._emit()
+
     def _auto_toggled(self) -> None:
         self._update_enabled()
         self._emit()
@@ -451,7 +512,31 @@ class TagEditor(QWidget):
         self._emit()
 
     def _conn_changed(self) -> None:
+        if not self._loading:
+            conn = ConnectionType(self.c_conn.value())
+            self._fill_sizes(conn, self._suggested_size(conn) or "")
         self._emit()
+
+    def _suggested_size(self, conn: ConnectionType) -> str | None:
+        nps = self.c_nps.currentText()
+        if nps == CUSTOM_PIPE:
+            return None
+        return suggested_connection_size(conn, nps, STATE.data_folder)
+
+    def _fill_sizes(self, conn: ConnectionType, current: str) -> None:
+        """Opciones de tamaño para el tipo de conexión, con ``current`` seleccionado."""
+        combo = self.e_conn_size
+        combo.blockSignals(True)
+        combo.clear()
+        suggested = self._suggested_size(conn)
+        combo.addItems(list(CONNECTION_SIZES[conn]))
+        idx = combo.findText(current)
+        if idx < 0 and current:
+            combo.addItem(current)
+            idx = combo.count() - 1
+        combo.setCurrentIndex(max(idx, 0))
+        combo.blockSignals(False)
+        self.l_size_hint.setText(t("f.suggested", size=suggested) if suggested else "")
 
     def _nps_changed(self) -> None:
         nps = self.c_nps.currentText()
@@ -460,6 +545,8 @@ class TagEditor(QWidget):
         if nps != CUSTOM_PIPE:
             self.c_sch.addItems(self.library.schedules(nps))
             idx = self.c_sch.findText("40")
+            if idx < 0:
+                idx = self.c_sch.findText("STD")
             self.c_sch.setCurrentIndex(max(idx, 0))
         self.c_sch.blockSignals(False)
         self._pipe_changed()
@@ -469,14 +556,46 @@ class TagEditor(QWidget):
         if nps != CUSTOM_PIPE and self.c_sch.currentText():
             pipe = self.library.pipe(nps, self.c_sch.currentText())
             self.quantities["pipe_id"].set_value(pipe.inner_diameter)
+            self.quantities["pipe_od"].set_value(pipe.outer_diameter)
+            self.quantities["wall"].set_value(pipe.wall_thickness)
+        if hasattr(self, "l_size_hint"):
+            suggested = self._suggested_size(ConnectionType(self.c_conn.value()))
+            self.l_size_hint.setText(t("f.suggested", size=suggested) if suggested else "")
         self._emit()
+
+    def _custom_pipe_changed(self) -> None:
+        """Con «Otro», el diámetro interno sale del exterior y el espesor."""
+        od, wall = self.quantities["pipe_od"].value(), self.quantities["wall"].value()
+        if self.c_nps.currentText() == CUSTOM_PIPE and od and wall is not None and od > 2 * wall:
+            self.quantities["pipe_id"].set_value(od - 2 * wall)
+
+    def nozzle_to_inner_wall(self) -> float:
+        """Distancia de la cara de la brida de montaje a la pared interna, m."""
+        return (self.quantities["mount"].value() or 0.0) + (self.quantities["wall"].value()
+                                                             or 0.0)
+
+    def _update_mount_label(self) -> None:
+        q = self.quantities
+        hs, wall = q["mount"].value() or 0.0, q["wall"].value() or 0.0
+        text = t("f.mount_sum", hs=fmt_quantity(hs, QuantityKind.LENGTH),
+                 wall=fmt_quantity(wall, QuantityKind.LENGTH),
+                 total=fmt_quantity(hs + wall, QuantityKind.LENGTH))
+        u = q["g_U"].value() or q["g_L"].value()
+        if u:
+            imm = u - hs - wall
+            text += "\n" + t("f.u_breakdown", hs=fmt_quantity(hs, QuantityKind.LENGTH),
+                               wall=fmt_quantity(wall, QuantityKind.LENGTH),
+                               imm=fmt_quantity(imm, QuantityKind.LENGTH),
+                               u=fmt_quantity(u, QuantityKind.LENGTH))
+        self.l_mount.setText(text)
+        if hasattr(self, "l_u_breakdown"):
+            self.l_u_breakdown.setText(text.split("\n")[-1] if u else "")
 
     def _update_enabled(self) -> None:
         auto = self.chk_auto.isChecked()
         self.quantities["density"].setEnabled(not auto)
         self.quantities["viscosity"].setEnabled(not auto)
         self.quantities["std_density"].setEnabled(not auto)
-        self.c_phase.setEnabled(not auto)
         profile = ShankProfile(self.c_profile.value())
         stepped = profile is ShankProfile.STEPPED
         for key in ("Ls", "bs"):
@@ -487,7 +606,10 @@ class TagEditor(QWidget):
                                                            ConnectionType.VAN_STONE)
         self.c_rating.setEnabled(flanged)
         self.c_face.setEnabled(flanged)
-        self.quantities["pipe_id"].setEnabled(self.c_nps.currentText() == CUSTOM_PIPE)
+        custom = self.c_nps.currentText() == CUSTOM_PIPE
+        for key in ("pipe_id", "pipe_od", "wall"):
+            self.quantities[key].setEnabled(custom)
+        self._update_mount_label()
         self.c_sch.setEnabled(self.c_nps.currentText() != CUSTOM_PIPE)
         self.btn_add_case.setEnabled(len(self.flow_rows) < MAX_FLOW_CASES)
         for row in self.flow_rows:
@@ -518,7 +640,7 @@ class TagEditor(QWidget):
         orient = MountingOrientation(self.c_orient.value())
         return DesignContext(
             pipe_id=self.quantities["pipe_id"].value(),
-            nozzle_length=self.quantities["nozzle"].value() or 0.0,
+            nozzle_length=self.nozzle_to_inner_wall(),
             nps="" if nps == CUSTOM_PIPE else nps,
             rating_class=self.c_rating.currentData(),
             elbow=orient in (MountingOrientation.ELBOW_TIP_UPSTREAM,
@@ -537,11 +659,11 @@ class TagEditor(QWidget):
         q = self.quantities
         self.c_profile.set_value(c.profile)
         self.c_conn.set_value(c.connection)
-        self.e_conn_size.setText(c.size)
+        self._fill_sizes(c.connection, c.size)
         if c.rating_class is not None:
             self.c_rating.setCurrentIndex(max(self.c_rating.findData(c.rating_class), 0))
-        if c.L0 > 0 and not q["nozzle"].value():
-            q["nozzle"].set_value(c.L0)
+        if c.L0 > 0 and not q["mount"].value():
+            q["mount"].set_value(max(c.L0 - (q["wall"].value() or 0.0), 0.0))
         for key, value in (("L", c.L), ("U", c.U), ("A", c.A), ("B", c.B), ("d", c.d),
                            ("t", c.t), ("Ls", c.Ls), ("L0", c.L0)):
             q[f"g_{key}"].set_value(value)
@@ -563,9 +685,11 @@ class TagEditor(QWidget):
         self.e_line.setText(idn.line_or_equipment)
         self.e_pid.setText(idn.pid)
         self.e_location.setText(idn.location)
-        idx = self.c_fluid.findData(proc.fluid_id)
-        self.c_fluid.setCurrentIndex(max(idx, 0))
-        self.c_phase.set_value(proc.phase)
+        self.c_ftype.blockSignals(True)
+        self.c_ftype.setCurrentIndex(max(self.c_ftype.findData(type_for(proc.fluid_id,
+                                                                         proc.phase)), 0))
+        self.c_ftype.blockSignals(False)
+        self._fill_fluids(proc.fluid_id)
         q["p_op"].set_value(proc.operating_pressure)
         q["p_design"].set_value(proc.design_pressure)
         q["t_op"].set_value(proc.operating_temperature)
@@ -594,13 +718,22 @@ class TagEditor(QWidget):
             self.c_sch.setCurrentIndex(max(self.c_sch.findText(pipe.schedule), 0))
         self.c_sch.blockSignals(False)
         q["pipe_id"].set_value(pipe.inner_diameter)
+        wall = pipe.wall_thickness
+        if wall is None and pipe.nominal_size and pipe.schedule:
+            try:
+                wall = self.library.pipe(pipe.nominal_size, pipe.schedule).wall_thickness
+            except KeyError:
+                wall = None
+        q["wall"].set_value(wall)
+        q["pipe_od"].set_value(pipe.inner_diameter + 2 * wall if wall is not None else None)
         self.c_orient.set_value(pipe.orientation)
         q["insulation"].set_value(pipe.insulation_thickness)
-        q["nozzle"].set_value(pipe.nozzle_length)
+        q["mount"].set_value(pipe.mount_height if pipe.mount_height is not None
+                             else max(pipe.nozzle_length - (wall or 0.0), 0.0))
         q["nozzle_id"].set_value(pipe.nozzle_inner_diameter)
         self.c_profile.set_value(g.profile)
         self.c_conn.set_value(tw.connection.type)
-        self.e_conn_size.setText(tw.connection.size)
+        self._fill_sizes(tw.connection.type, tw.connection.size)
         if tw.connection.rating_class:
             self.c_rating.setCurrentIndex(max(self.c_rating.findData(tw.connection.rating_class),
                                               0))
@@ -609,6 +742,8 @@ class TagEditor(QWidget):
         self.c_material.setCurrentIndex(max(self.c_material.findData(tw.material.material_id),
                                             0))
         self.c_coating.setCurrentIndex(max(self.c_coating.findData(tw.material.coating), 0))
+        q["mat_E"].set_value(tw.material.elastic_modulus)
+        q["mat_S"].set_value(tw.material.allowable_stress)
         for key in ("L", "U", "A", "B", "d", "t", "b", "Ls", "bs", "T_lag", "L0"):
             q[f"g_{key}"].set_value(getattr(g, key))
         q["g_ca"].set_value(g.corrosion_allowance)
@@ -619,6 +754,21 @@ class TagEditor(QWidget):
         self._loading = False
         self._update_enabled()
         self.validate()
+
+    def show_material_hint(self, inp: CalcInput) -> None:
+        """Muestra E y S de biblioteca para comparar con los cargados a mano."""
+        proc = inp.process
+        try:
+            mat = self.library.material_properties(inp.thermowell.material.material_id,
+                                                   proc.operating_temperature,
+                                                   proc.design_temperature)
+        except KeyError:
+            self.l_mat_lib.setText("")
+            return
+        self.l_mat_lib.setText(t("f.mat_lib",
+                                 E=fmt_quantity(mat.elastic_modulus,
+                                                QuantityKind.ELASTIC_MODULUS),
+                                 S=fmt_quantity(mat.allowable_stress, QuantityKind.STRESS)))
 
     def show_properties(self, inp: CalcInput) -> None:
         """Muestra ρ, μ y su fuente (tras recalcular con CoolProp)."""
@@ -631,6 +781,8 @@ class TagEditor(QWidget):
         self.lbl_source.setText(props.source_note or source)
         if self.chk_auto.isChecked():
             self.c_phase.set_value(inp.process.phase)
+        else:
+            self.c_phase.set_value(TYPES_BY_ID[str(self.c_ftype.currentData())].phase)
 
     def _number(self, edit: QLineEdit) -> float | None:
         text = edit.text().strip()
@@ -674,7 +826,7 @@ class TagEditor(QWidget):
                                "pid": self.e_pid.text(), "location": self.e_location.text()},
             "process": {
                 "fluid_id": self.c_fluid.currentData(),
-                "phase": self.c_phase.value().value,
+                "phase": TYPES_BY_ID[str(self.c_ftype.currentData())].phase.value,
                 "operating_pressure": q["p_op"].value(),
                 "design_pressure": q["p_design"].value(),
                 "operating_temperature": q["t_op"].value(),
@@ -695,7 +847,8 @@ class TagEditor(QWidget):
                 "inner_diameter": q["pipe_id"].value(),
                 "orientation": self.c_orient.value().value,
                 "insulation_thickness": q["insulation"].value() or 0.0,
-                "nozzle_length": q["nozzle"].value() or 0.0,
+                "wall_thickness": q["wall"].value(),
+                "mount_height": q["mount"].value() or 0.0,
                 "nozzle_inner_diameter": q["nozzle_id"].value(),
             },
             "thermowell": {
@@ -711,9 +864,11 @@ class TagEditor(QWidget):
                     "corrosion_allowance": q["g_ca"].value() or 0.0,
                 },
                 "material": {"material_id": self.c_material.currentData(),
-                             "coating": self.c_coating.currentData()},
+                             "coating": self.c_coating.currentData(),
+                             "elastic_modulus": q["mat_E"].value(),
+                             "allowable_stress": q["mat_S"].value()},
                 "connection": {
-                    "type": conn.value, "size": self.e_conn_size.text(),
+                    "type": conn.value, "size": self.e_conn_size.currentText().strip(),
                     "rating_class": self.c_rating.currentData() if flanged else None,
                     "face": self.c_face.value().value if flanged else None,
                 },

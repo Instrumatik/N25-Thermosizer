@@ -14,6 +14,7 @@ from thermowell_sizer.core.models import (
     FlowBasis,
     FlowCase,
     MaterialRef,
+    Phase,
     ShankProfile,
 )
 from thermowell_sizer.core.units import BAR_PA, INCH_M, KELVIN_OFFSET, STANDARD_ATMOSPHERE_PA
@@ -49,6 +50,7 @@ def _with(inp: CalcInput, **sections: dict[str, object]) -> CalcInput:
 def water_line() -> TagRecord:
     """Ejemplo 1: agua de refrigeración, cónico 316 bridado; cumple."""
     inp = default_input("TW-101")
+    inp = _with(inp, pipe={"wall_thickness": 0.00711})
     inp = inp.model_copy(update={"identification": inp.identification.model_copy(
         update={"service": "Agua de refrigeración", "line_or_equipment": "6\"-CW-101",
                 "pid": "P&ID-001"})})
@@ -71,14 +73,15 @@ def steam_header() -> TagRecord:
     inp = _with(
         base,
         identification={"service": "Colector de vapor de alta", "pid": "P&ID-002"},
-        process={"fluid_id": "water", "operating_pressure": _barg(40),
+        process={"fluid_id": "water", "phase": Phase.STEAM, "operating_pressure": _barg(40),
                  "design_pressure": _barg(45), "operating_temperature": _celsius(400),
                  "design_temperature": _celsius(425),
                  "flow_cases": (FlowCase(label="normal", basis=FlowBasis.VELOCITY,
                                          velocity=25.0),
                                 FlowCase(label="max", basis=FlowBasis.VELOCITY,
                                          velocity=35.0))},
-        pipe={"nominal_size": "8", "schedule": "80", "inner_diameter": 0.19368},
+        pipe={"nominal_size": "8", "schedule": "80", "inner_diameter": 0.19368,
+              "wall_thickness": 0.0127},
     )
     return TagRecord(input=inp.model_copy(update={"thermowell": well}))
 
@@ -94,13 +97,14 @@ def gas_failing() -> TagRecord:
     inp = _with(
         base,
         identification={"service": "Gas natural a turbina", "pid": "P&ID-003"},
-        process={"fluid_id": "natural_gas", "operating_pressure": _barg(50),
+        process={"fluid_id": "natural_gas", "phase": Phase.GAS, "operating_pressure": _barg(50),
                  "design_pressure": _barg(60), "operating_temperature": _celsius(30),
                  "design_temperature": _celsius(60),
                  "flow_cases": (FlowCase(label="max", basis=FlowBasis.VELOCITY,
                                          velocity=30.0),)},
-        pipe={"nominal_size": "12", "schedule": "40", "inner_diameter": 0.30323,  # 12" sch 40
-              "nozzle_length": 0.150},
+        # 12" sch 40; brida de montaje Hs = 140 mm desde la superficie externa
+        pipe={"nominal_size": "12", "schedule": "40", "inner_diameter": 0.30323,
+              "wall_thickness": 0.01031, "mount_height": 0.140, "nozzle_length": 0.15031},
     )
     return TagRecord(input=inp.model_copy(update={"thermowell": well}))
 

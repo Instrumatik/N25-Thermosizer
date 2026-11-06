@@ -4,13 +4,18 @@ from __future__ import annotations
 
 from typing import Final
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QUrl
+from PySide6.QtGui import QImage, QTextDocument
 from PySide6.QtWidgets import QListWidget, QSplitter, QTextBrowser, QVBoxLayout, QWidget
 
 from thermowell_sizer import DISCLAIMER_EN, DISCLAIMER_ES
 from thermowell_sizer.i18n import Language
+from thermowell_sizer.infocards.images import mount_diagram
 from thermowell_sizer.ui.state import STATE
 from thermowell_sizer.ui.text import t
+
+MOUNT_SVG_ES: Final = '<p><img src="img:mount_es"></p>'
+MOUNT_SVG_EN: Final = '<p><img src="img:mount_en"></p>'
 
 TOPICS: Final[tuple[tuple[str, str, str, str, str], ...]] = (
     # (id, título ES, título EN, cuerpo ES, cuerpo EN)
@@ -45,11 +50,18 @@ TOPICS: Final[tuple[tuple[str, str, str, str, str], ...]] = (
      "velocity, mass or volume flow. Velocity uses the pipe inner diameter (para. 7-3). "
      "Always evaluate the highest-velocity case.</p>"),
     ("pipe", "3. Tubería", "3. Pipe",
-     "<p>Elija NPS y schedule para obtener el diámetro interno de ASME B36.10M, o "
-     "seleccione “—” para cargarlo a mano. La longitud de tobera define cuánto del vástago "
-     "queda protegido del flujo (L0).</p>",
-     "<p>Choose NPS and schedule to get the ASME B36.10M inner diameter, or pick “—” to "
-     "enter it manually. Nozzle length defines how much of the shank is shielded (L0).</p>"),
+     "<p>Elija NPS y schedule (ASME B36.10M y B36.19M) para obtener diámetro exterior, "
+     "espesor de pared y diámetro interno, o «Otro» para cargar exterior y espesor a mano."
+     "</p><p><b>Hs</b> es la altura de la brida de montaje: de la cara externa del caño a "
+     "la cara de la brida donde apoya el termopozo. El programa le suma el espesor de pared "
+     "para llegar a la pared interna, y U = Hs + pared + inmersión. Ese tramo puede cargarse "
+     "como protegido del flujo (L0).</p>" + MOUNT_SVG_ES,
+     "<p>Choose NPS and schedule (ASME B36.10M and B36.19M) to get outside diameter, wall "
+     "and inside diameter, or «Other» to enter outside diameter and wall by hand.</p>"
+     "<p><b>Hs</b> is the mounting flange height: from the pipe outside surface to the "
+     "flange face the thermowell seats on. The program adds the wall thickness to reach the "
+     "inside wall, and U = Hs + wall + immersion. That stretch can be entered as shielded "
+     "from the flow (L0).</p>" + MOUNT_SVG_EN),
     ("thermowell", "4. Termopozo", "4. Thermowell",
      "<p>L es la longitud no soportada, desde la punta hasta el plano de soporte (cara de "
      "brida, inicio de rosca o soldadura). A es el diámetro en el soporte y B en la punta. "
@@ -119,6 +131,10 @@ class HelpWindow(QWidget):
         if 0 <= row < len(TOPICS):
             topic = TOPICS[row]
             es = STATE.language is Language.ES
+            for lang in ("es", "en"):
+                self.view.document().addResource(
+                    QTextDocument.ResourceType.ImageResource, QUrl(f"img:mount_{lang}"),
+                    QImage.fromData(mount_diagram(lang)))
             self.view.setHtml(f"<h2>{topic[1] if es else topic[2]}</h2>"
                               + (topic[3] if es else topic[4]))
 

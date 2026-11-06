@@ -20,7 +20,7 @@ from thermowell_sizer.core.models import FatigueClass, MaterialProperties
 from thermowell_sizer.core.units import BAR_PA, INCH_M, KELVIN_OFFSET
 from thermowell_sizer.data import seed_library, seed_materials, seed_tables
 
-SEED_VERSION = "2026.11.3"
+SEED_VERSION = "2026.11.4"
 GPA = 1.0e9
 MPA = 1.0e6
 MPA_S = 1.0e-3
@@ -104,7 +104,8 @@ class SearchHit:
     score: float
 
 
-def _normalize(text: str) -> str:
+def normalize_text(text: str) -> str:
+    """Minúsculas sin acentos, para comparar búsquedas."""
     folded = unicodedata.normalize("NFKD", text.casefold())
     return "".join(ch for ch in folded if not unicodedata.combining(ch))
 
@@ -501,14 +502,14 @@ class Library:
 
     def search(self, text: str, limit: int = 15) -> list[SearchHit]:
         """Buscador global tolerante a errores de escritura y sin distinguir acentos."""
-        query = _normalize(text.strip())
+        query = normalize_text(text.strip())
         if not query:
             return []
         rows = self.conn.execute("SELECT kind, ref_id, title, body FROM search_index").fetchall()
         hits: list[SearchHit] = []
         for r in rows:
-            title = _normalize(r["title"])
-            body = _normalize(r["body"])
+            title = normalize_text(r["title"])
+            body = normalize_text(r["body"])
             words = title.split()
             if query in title:
                 score = 1.0

@@ -38,6 +38,12 @@ from thermowell_sizer.reports.common import (
 from thermowell_sizer.reports.datasheet import calc_rows, sections
 from thermowell_sizer.reports.drawing import thermowell_drawing
 from thermowell_sizer.reports.mathrender import plain, render_png
+from thermowell_sizer.reports.overview import (
+    convention_table,
+    inputs_table,
+    results_table,
+    status_table,
+)
 from thermowell_sizer.reports.pdfbase import (
     FONT,
     FONT_BOLD,
@@ -150,6 +156,18 @@ def build_memo(rep: TagReport, path: Path) -> Path:
     story += [_p(f.t("toc"), "h1"), toc, PageBreak()]
 
     story += [_p(f.t("m.scope"), "h1"), _p(f.t("m.scope_text"), "body")]
+
+    # Resumen al inicio: datos de entrada de la planilla, resultados, estado y convención
+    story += [_p(f.t("ov.title"), "h1"), _p(f.t("ov.inputs_title"), "h2"),
+              _p(f.t("ov.inputs_text"), "body"), inputs_table(rep, BODY_W)]
+    results_t = results_table(rep, BODY_W)
+    if results_t is not None:
+        story += [_p(f.t("res.calculated"), "h2"), results_t]
+    status_t = status_table(rep, BODY_W * 0.7)
+    if status_t is not None:
+        story += [_p(f.t("res.asme_status"), "h2"), status_t]
+    story += [_p(f.t("res.convention"), "h2"), convention_table(rep, BODY_W),
+              Spacer(1, 2 * mm), _p(f.t("res.convention_note"), "small")]
 
     story.append(_p(f.t("m.inputs"), "h1"))
     for title, rows in sections(rep):

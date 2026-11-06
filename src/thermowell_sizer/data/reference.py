@@ -174,7 +174,8 @@ THERMOWELL_TYPES = RefTable(
         (_b("Bridado", "Flanged"),
          _b("Desmontable, cualquier rating, el más usado en proceso",
             "Removable, any rating, most common in process"),
-         _b("Más caro; requiere tobera bridada", "More costly; needs a flanged nozzle"),
+         _b("Más caro; requiere brida de montaje en la línea",
+            "More costly; needs a flanged mounting nozzle"),
          _b("Hidrocarburos, servicios peligrosos, recipientes",
             "Hydrocarbons, hazardous service, vessels")),
         ("Socket weld",
@@ -294,8 +295,8 @@ INSTALLATION = RefTable(
             "(sedimentos) en líquidos sucios.",
             "On horizontal lines, connection in the upper quadrant; avoid the bottom "
             "(sediment) in dirty liquids.")),
-        (_b("Toberas", "Nozzles"),
-         _b("Proyección habitual de 150 mm hasta 600# y 200 mm desde 900#; considerar el "
+        (_b("Brida de montaje (Hs)", "Mounting flange (Hs)"),
+         _b("Altura habitual de 150 mm hasta 600# y 200 mm desde 900#; considerar el "
             "tramo protegido L0 en el cálculo.",
             "Usual projection 150 mm up to 600# and 200 mm from 900#; account for the "
             "shielded length L0 in the calculation.")),

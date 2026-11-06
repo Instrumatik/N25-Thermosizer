@@ -7,7 +7,14 @@ from xml.sax.saxutils import escape
 
 from reportlab.lib import colors
 from reportlab.lib.units import mm
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import (
+    PageBreak,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
 from reportlab.platypus.flowables import Flowable
 
 from thermowell_sizer.core.advisories import AdvisoryLevel
@@ -21,6 +28,7 @@ from thermowell_sizer.reports.common import (
     inspection_lines,
 )
 from thermowell_sizer.reports.drawing import thermowell_drawing
+from thermowell_sizer.reports.overview import convention_table, results_table, status_table
 from thermowell_sizer.reports.pdfbase import (
     FONT,
     FONT_BOLD,
@@ -78,6 +86,10 @@ def sections(rep: TagReport) -> list[tuple[str, list[Row]]]:
         if c[0] == tw.material.coating:
             coating = c[1] if f.lang.value == "es" else c[2]
     conn = tw.connection
+    wall = pipe.wall_thickness or 0.0
+    hs = (pipe.mount_height if pipe.mount_height is not None
+          else max(pipe.nozzle_length - wall, 0.0))
+    u = g.U if g.U is not None else g.L
     rating = (f"{conn.rating_class} / {conn.face.value if conn.face else '—'}"
               if conn.type in (ConnectionType.FLANGED, ConnectionType.VAN_STONE) else "—")
     cases = "; ".join(
@@ -111,7 +123,8 @@ def sections(rep: TagReport) -> list[tuple[str, list[Row]]]:
              if pipe.nominal_size else "—"),
             (f.t("pipe_id"), f.q(pipe.inner_diameter, QuantityKind.DIAMETER)),
             (f.t("orientation"), _enum(rep, pipe.orientation.value)),
-            (f.t("nozzle"), f.q(pipe.nozzle_length, QuantityKind.LENGTH)),
+            (f.t("wall"), f.q(pipe.wall_thickness, QuantityKind.LENGTH)),
+            (f.t("nozzle"), f.q(hs, QuantityKind.LENGTH)),
         ]),
         (f.t("sec.thermowell"), [
             (f.t("construction"), f.t("bar_stock")),
@@ -120,6 +133,9 @@ def sections(rep: TagReport) -> list[tuple[str, list[Row]]]:
             (f.t("connection"), f"{_enum(rep, conn.type.value)} {conn.size}".strip()),
             (f.t("rating"), rating),
             (f.t("U"), f.q(g.U, QuantityKind.LENGTH)),
+            (f.t("u_breakdown"), f.t("u_breakdown_value", hs=f.q(hs, QuantityKind.LENGTH),
+                                     wall=f.q(wall, QuantityKind.LENGTH),
+                                     imm=f.q(u - pipe.nozzle_length, QuantityKind.LENGTH))),
             (f.t("L"), f.q(g.L, QuantityKind.LENGTH)),
             (f.t("A"), f.q(g.A, QuantityKind.DIAMETER)),
             (f.t("B"), f.q(g.B, QuantityKind.DIAMETER)),
@@ -187,6 +203,9 @@ def _kv_table(sections_: list[tuple[str, list[Row]]], width: float, start: int =
                   ("FONT", (0, len(data)), (-1, len(data)), FONT_BOLD, 7.4)]
         data.append([title, "", ""])
         for label, value in rows:
+            style += [("ALIGN", (0, len(data)), (0, len(data)), "CENTER"),
+                      ("LEFTPADDING", (0, len(data)), (0, len(data)), 0.5),
+                      ("RIGHTPADDING", (0, len(data)), (0, len(data)), 0.5)]
             data.append([str(n), Paragraph(escape(label), STYLES["cell"]),
                          Paragraph(escape(value), STYLES["cell"])])
             n += 1
@@ -257,20 +276,34 @@ def build_datasheet(rep: TagReport, path: Path) -> Path:
         notes += [f.t(n) for n in rep.evaluation.result.notes]
     if rep.record.notes:
         notes.append(rep.record.notes)
+    full_w = PAGE_W - 2 * MARGIN
     story: list[Flowable] = [body, Spacer(1, 3 * mm),
                              Paragraph(f"<b>{f.t('sec.notes')}</b>", STYLES["body"])]
     story += [Paragraph(f"{i}. {n}", STYLES["small"]) for i, n in enumerate(notes, 1)] or [
         Paragraph("—", STYLES["small"])]
+    story += [Spacer(1, 3 * mm), signature_table(rep, full_w), PageBreak()]
+    # Página 2: estado ASME, resultados calculados, convención de largos y recomendaciones
+    status_t = status_table(rep, full_w * 0.52)
+    conv_t = convention_table(rep, full_w * 0.45)
+    if status_t is not None:
+        story.append(Table([[status_t, conv_t]], colWidths=[full_w * 0.55, full_w * 0.45],
+                           style=TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"),
+                                             ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                                             ("RIGHTPADDING", (0, 0), (-1, -1), 0)])))
+    else:
+        story.append(conv_t)
+    results_t = results_table(rep, full_w)
+    if results_t is not None:
+        story += [Spacer(1, 3 * mm), results_t]
     advice = advisory_lines(rep)
     if advice:
-        story += [Spacer(1, 2 * mm), Paragraph(f"<b>{f.t('adv.title')}</b>", STYLES["body"])]
+        story += [Spacer(1, 3 * mm), Paragraph(f"<b>{f.t('adv.title')}</b>", STYLES["body"])]
         story += [Paragraph(f"{LEVEL_MARK[level]} {escape(text)}", STYLES["small"])
                   for level, text in advice]
     story += [Spacer(1, 2 * mm), Paragraph(f"<b>{f.t('insp.title')}</b>", STYLES["body"])]
-    story.append(Paragraph("&nbsp;&nbsp;&nbsp;".join(f"☐ {escape(text)}"
-                                       for text in inspection_lines(rep, short=True)),
-                           STYLES["small"]))
-    story += [Spacer(1, 3 * mm), signature_table(rep, PAGE_W - 2 * MARGIN)]
+    story += [Paragraph(f"☐ {escape(text)}", STYLES["small"])
+              for text in inspection_lines(rep, short=True)]
+    story += [Spacer(1, 3 * mm), Paragraph(escape(f.disclaimer), STYLES["small"])]
 
     def decorate(c: NumberedCanvas, page: int, total: int) -> None:
         title_block(c, rep.project, f, f.t("ds.title"), f"{rep.tag} — "

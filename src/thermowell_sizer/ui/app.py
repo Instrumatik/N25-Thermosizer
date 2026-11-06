@@ -7,7 +7,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from PySide6.QtCore import QSettings, QStandardPaths
+from PySide6.QtCore import QSettings, QSize, QStandardPaths
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QMessageBox
 
@@ -90,13 +90,23 @@ def smoke_test(window: MainWindow) -> int:
     return 0 if ok else 1
 
 
+def app_icon() -> QIcon:
+    """Ícono de la ventana y de la barra de tareas: la «T» sola en tamaños chicos."""
+    icon = QIcon()
+    for size in (16, 24, 32, 48):
+        icon.addFile(str(asset_path("icon_t.png")), QSize(size, size))
+    for size in (64, 128, 256):
+        icon.addFile(str(asset_path("icon_tws.png")), QSize(size, size))
+    return icon
+
+
 def main(argv: list[str] | None = None) -> int:
     """Arranca la interfaz. Acepta opcionalmente la ruta de un proyecto ``.tws``."""
     args = sys.argv if argv is None else argv
     app = QApplication(args)
     app.setOrganizationName(ORGANIZATION)
     app.setApplicationName(APPLICATION)
-    app.setWindowIcon(QIcon(str(asset_path("logo_instrumatik.png"))))
+    app.setWindowIcon(app_icon())
     settings = QSettings()
     load_preferences(settings)
     apply_theme(app, STATE.dark)

@@ -119,7 +119,7 @@ GLOSSARY: Final[tuple[tuple[str, str, str, str, str, str, str], ...]] = (
      "Shank with a reduced-diameter end section for faster thermal response.", "",
      "geometry"),
     ("velocity_collar", "Collar de soporte", "Velocity collar",
-     "Anillo que apoya el vástago en la tobera. La norma vigente lo deja fuera de su "
+     "Anillo que apoya el vástago en la conexión de montaje. La norma vigente lo deja fuera de su "
      "alcance y desaconseja su uso.",
      "Ring that supports the shank in the nozzle; outside the current standard's scope.",
      "", ""),
@@ -154,7 +154,8 @@ GLOSSARY: Final[tuple[tuple[str, str, str, str, str, str, str], ...]] = (
      "", "geometry"),
     ("flanged_well", "Termopozo bridado", "Flanged thermowell",
      "Vástago soldado a penetración completa a una brida (o mecanizado de una pieza) que se "
-     "monta en una tobera bridada. Es la ejecución más usada en plantas de proceso.",
+     "monta en una brida de montaje soldada a la línea. Es la ejecución más usada en "
+     "plantas de proceso.",
      "Shank full-penetration welded to a flange (or machined in one piece) mounted on a "
      "flanged nozzle. The most common design in process plants.", "", "geometry"),
     ("socket_weld_well", "Termopozo socket weld", "Socket-weld thermowell",

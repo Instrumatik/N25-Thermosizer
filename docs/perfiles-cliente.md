@@ -44,10 +44,10 @@ condiciones de uso del documento original.
 | `models.<id>.design` | Ejecución del catálogo genérico: `threaded_tapered`, `threaded_straight`, `threaded_stepped`, `flanged_tapered`, `flanged_straight`, `flanged_stepped`, `socket_tapered`, `weld_in_tapered`, `van_stone_tapered`. |
 | `U_mm` | Largo de inserción del modelo, mm (se usa también como L). |
 | `A_mm`, `B_mm`, `bore_mm` | Opcionales: diámetros propios del modelo. Si faltan se usan los del catálogo genérico adaptados al agujero. |
-| `nozzle_mm` | Opcional: proyección de tobera o acople del modelo (L0). Si falta se usa la tabla `nozzles` por rating. |
+| `nozzle_mm` | Opcional: altura de la brida de montaje o acople del modelo (L0). Si falta se usa la tabla `nozzles` por rating. |
 | `rules` | Tabla de aplicación. `connection`: `flanged`, `threaded`, `weld_in`, `socket_weld`, `van_stone`; `mounting`: `elbow` o `perpendicular`. `by_nps` asigna un modelo a cada NPS; `null` = montaje no permitido. |
 | `max_nps` | Las líneas mayores usan la columna de este NPS. |
 
 Reglas de selección: el programa usa la columna del NPS igual o inmediato inferior al de
 la línea; si la línea es menor que el primer NPS de la tabla, avisa que debe ampliarse.
-Cuando el tag ya tiene una longitud de tobera cargada, se respeta esa.
+Cuando el tag ya tiene una altura de brida de montaje cargada, se respeta esa.

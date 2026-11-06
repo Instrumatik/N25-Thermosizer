@@ -10,7 +10,7 @@ listados del proyecto.
 
 ## 1. Instalación
 
-1. Ejecute `ThermoWellSizer-1.1.0-setup.exe`. Puede instalar solo para su usuario (no
+1. Ejecute `ThermoWellSizer-1.2.0-setup.exe`. Puede instalar solo para su usuario (no
    pide permisos de administrador) o para todos los usuarios del equipo.
 2. Opcionalmente, cree el acceso directo en el escritorio y asocie los archivos `.tws`
    para abrir los proyectos con doble clic.
@@ -61,22 +61,36 @@ de cada reporte muestra «Licenciado a …».
    reportes.
 2. **Proyecto › Nuevo tag** (Ctrl+T). Complete los cinco pasos:
    1. *Identificación*: tag, servicio, línea o equipo, P&ID, ubicación.
-   2. *Proceso*: fluido, presiones y temperaturas de operación y diseño, y uno o más
+   2. *Proceso*: primero el **tipo de fluido** (líquidos, gases, vapores, vapor de agua
+      (steam) o bifásico) y después el **fluido**, que muestra solo los de ese tipo; los
+      gases licuables aparecen en líquidos como «(Estado Líquido)». Con propiedades
+      automáticas el programa avisa si con P y T el fluido no está en el estado elegido.
+      Luego presiones y temperaturas de operación y diseño, y uno o más
       casos de flujo (mínimo, normal, máximo) por velocidad, caudal másico,
       volumétrico o **caudal estándar de gas** (Sm³/h a 15 °C y 101,325 kPa). La
       densidad, la viscosidad, la fase y la densidad en condiciones estándar se calculan
       solas (CoolProp o tablas de la biblioteca); desmarque la casilla para cargarlas a
       mano.
-   3. *Tubería*: NPS y schedule (el diámetro interno sale de ASME B36.10M/B36.19M) u
-      otro diámetro cargado a mano, orientación, longitud de tobera y, opcionalmente, su
-      diámetro interno (para verificar que el vástago pase).
+   3. *Tubería*: NPS (1/8" a 48") y schedule (todos los de ASME B36.10M y B36.19M,
+      ordenados por espesor); con **Otro** se cargan OD y espesor a mano. Orientación,
+      **Hs, altura de la brida de montaje** medida desde la superficie externa de la
+      tubería hasta la cara de la brida (el programa suma el espesor de pared y muestra
+      el desglose Hs + pared + inmersión = U) y, opcionalmente, el diámetro interno de la
+      conexión de montaje (para verificar que el vástago pase).
    4. *Termopozo*: perfil (recto, cónico, escalonado), dimensiones L, A, B, d, t, b, U,
-      material, conexión a proceso y recubrimiento. El botón **Diseño típico /
+      material, conexión a proceso (el **tamaño** se elige de una lista según el tipo,
+      con el sugerido para el NPS de la línea; clase y cara solo para bridadas y Van
+      Stone), recubrimiento y, si hace falta, **E y S cargados a mano** para ese tag. El botón **Diseño típico /
       especificación…** completa las cotas solo (ver sección 4.1).
    5. *Sensor*: tipo (RTD o termopar) y diámetro de vaina.
 3. El cálculo corre solo medio segundo después de cada cambio; **F5** lo fuerza y
    **Shift+F5** calcula todos los tags.
-4. Revise los resultados. Cada criterio muestra valor, límite, margen y la referencia a
+4. Revise los resultados. La pestaña **Resumen ASME** muestra el estado por tema
+   (erosión, frecuencia de estela, esfuerzos, presión y rating, y global), los
+   **resultados calculados** de cada caso con su límite (caudal real, V, V_e, V/V_e,
+   Re, Strouhal, f_s, f_n,c, relación de frecuencias, esfuerzos estacionario, dinámico
+   y de von Mises) y la equivalencia entre la convención de la planilla (Hs + inserción)
+   y la del programa (U = L desde la cara de la brida). Cada criterio muestra valor, límite, margen y la referencia a
    la subsección de la norma. La pestaña *Traza* lista cada paso del cálculo con su
    ecuación y sus valores.
 5. Si el tag no cumple, **Cálculo › Proponer alternativas** (Ctrl+Shift+O) busca
@@ -88,6 +102,14 @@ de cada reporte muestra «Licenciado a …».
 Los campos fuera del alcance de la norma se marcan en rojo con el motivo. F1 abre la
 ayuda del paso visible.
 
+**Fichas ⓘ.** Cada dato, opción y resultado tiene un botón ⓘ (en los resultados: el
+enlace ⓘ, doble clic en un criterio o clic en el encabezado de la tabla por caso). La
+ficha explica qué es, qué hace en el programa, qué resultados afecta, sus umbrales,
+contra qué se compara, cómo interpretarlo, qué hacer, la referencia resumida a la norma
+y las unidades, con fórmulas, diagrama del termopozo con la cota resaltada, esquemas de
+instalación, curvas trazadas con los datos del tag y un ejemplo resuelto con el tag
+actual y con un caso de referencia. Las fichas también aparecen en la búsqueda Ctrl+K.
+
 ### 4.1 Diseños típicos y especificaciones de cliente
 
 En el paso *Termopozo*, **Diseño típico / especificación…** abre un diálogo con dos
@@ -97,7 +119,7 @@ orígenes:
   y escalonada; bridadas recta, cónica y escalonada; socket weld; para soldar; Van
   Stone), agujero de 0,260" (6,6 mm) o 0,385" (9,8 mm), punta de 1/4" y largos U
   normalizados de 2½" a 22½". El programa **recomienda el largo U** según el diámetro
-  interno y la tobera: el más corto que deja la punta al menos a 1/3 del diámetro (y unos
+  interno y la altura Hs: el más corto que deja la punta al menos a 1/3 del diámetro (y unos
   100 mm dentro del flujo si la línea lo permite) sin acercarse a la pared opuesta.
 - **Perfiles de cliente**: archivos JSON con los modelos normalizados de una
   especificación de empresa. El programa elige el modelo según el tipo de conexión, el
@@ -107,7 +129,7 @@ orígenes:
   hay una plantilla en `ejemplos\perfil_ejemplo.json`.
 
 Al aplicar se cargan perfil, conexión, U = L, A, B, d, t, Ls y el tramo protegido L0
-(tobera). Son valores típicos: confirme las cotas con el plano del fabricante.
+(brida de montaje). Son valores típicos: confirme las cotas con el plano del fabricante.
 
 ### 4.2 Recomendaciones automáticas
 
@@ -116,8 +138,8 @@ avisos de buena práctica, ordenados por gravedad:
 
 - velocidad erosiva (API RP 14E) y fluidos con sólidos;
 - inmersión insuficiente (largo sensible más 4 a 6 diámetros de punta), punta que toca o
-  queda cerca de la pared opuesta, tobera sin L0 cargado, vástago que no pasa por la
-  tobera;
+  queda cerca de la pared opuesta, brida de montaje sin L0 cargado, vástago que no pasa por la
+  conexión de montaje;
 - huelgo entre sensor y agujero, sensor sin resorte, rango de temperatura del sensor,
   vaina cerámica a muy alta temperatura, escala sugerida del termómetro bimetálico;
 - recubrimiento por encima de su temperatura, conexión roscada en servicio peligroso o
@@ -196,7 +218,7 @@ Todos los reportes llevan el aviso de responsabilidad y la versión del programa
 |---|---|---|
 | `ejemplo_1_agua.tws` | Agua de refrigeración, 10 barg / 80 °C, 2 m/s; cónico 316, bridado 1½" 300# RF en línea de 6". | Cumple. |
 | `ejemplo_2_vapor.tws` | Vapor sobrecalentado 40 barg / 400 °C, 25 y 35 m/s; cónico corto F22, 600#, línea de 8" sch 80. | Cumple, con aviso de que el rating de la brida F22 (grupo 1.10) no está en la biblioteca y debe verificarse aparte. |
-| `ejemplo_3_gas_no_cumple.tws` | Gas natural 50 barg / 30 °C a 30 m/s; vástago largo y delgado (L = 400 mm, tobera de 150 mm) en línea de 12". | No cumple por frecuencia (resonancia). Use *Proponer alternativas* para ver geometrías que cumplen. |
+| `ejemplo_3_gas_no_cumple.tws` | Gas natural 50 barg / 30 °C a 30 m/s; vástago largo y delgado (L = 400 mm, brida de montaje Hs = 140 mm) en línea de 12". | No cumple por frecuencia (resonancia). Use *Proponer alternativas* para ver geometrías que cumplen. |
 
 ## 11. Atajos de teclado
 

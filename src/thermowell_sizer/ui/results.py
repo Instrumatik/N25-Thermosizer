@@ -27,6 +27,15 @@ from thermowell_sizer.core.units import QuantityKind
 from thermowell_sizer.i18n import tr
 from thermowell_sizer.reports.common import CRITERION_NAMES, SCOPE_NAMES
 from thermowell_sizer.services import Evaluation, render_advisory
+from thermowell_sizer.summary import (
+    asme_status,
+    calculated_results,
+    label,
+    length_convention,
+    limit_text,
+    value_text,
+)
+from thermowell_sizer.ui.infocard_ui import show_card
 from thermowell_sizer.ui.state import STATE
 from thermowell_sizer.ui.text import t
 from thermowell_sizer.ui.widgets import STATUS_COLORS, StatusLight, fmt, fmt_quantity
@@ -78,6 +87,60 @@ def scope_label(scope: str) -> str:
     return text
 
 
+def _q(value: float, kind: QuantityKind) -> str:
+    return fmt_quantity(value, kind, gauge=kind is QuantityKind.PRESSURE and STATE.gauge)
+
+
+def _n(value: float, decimals: int) -> str:
+    return fmt(value, decimals)
+
+
+def _info(key: str) -> str:
+    """Enlace «ⓘ» a la ficha de una clave."""
+    return f"<a href='card:{key}' style='text-decoration:none'>ⓘ</a>"
+
+
+def overview_html(ev: Evaluation) -> str:
+    """HTML de la pestaña «Resumen ASME»."""
+    es = STATE.language.value == "es"
+    out = [f"<h3>{t('res.asme_status')}</h3><table cellspacing='0' cellpadding='4'>"]
+    for line in asme_status(ev):
+        color = STATUS_COLORS[line.status]
+        extra = f" (V/Ve = {fmt(line.ratio, 2)})" if line.ratio is not None else ""
+        bold = ("<b>", "</b>") if line.key == "topic.overall" else ("", "")
+        out.append(f"<tr><td>{bold[0]}{label(line.key, es)}{bold[1]} {_info(line.key)}</td>"
+                   f"<td><span style='color:{color}'>●</span> {bold[0]}"
+                   f"{label(line.verdict, es)}{bold[1]}{extra}</td></tr>")
+    out.append("</table>")
+    cases = calculated_results(ev)
+    if cases:
+        out.append(f"<h3>{t('res.calculated')}</h3>"
+                   "<table cellspacing='0' cellpadding='3' border='1' "
+                   "style='border-collapse:collapse'><tr><th></th><th></th>")
+        for c in cases:
+            out.append(f"<th>{html.escape(scope_label(c.scope))}</th>"
+                       f"<th>{t('res.limit')}</th>")
+        out.append("</tr>")
+        for i, row in enumerate(cases[0].rows):
+            out.append(f"<tr><td>{label(row.key, es)} {_info(row.key)}</td>"
+                       f"<td><i>{row.symbol}</i></td>")
+            for c in cases:
+                r = c.rows[i]
+                rc = STATUS_COLORS[r.status] if r.status is not None else None
+                dot = f"<span style='color:{rc}'>● </span>" if rc else ""
+                out.append(f"<td align='right'>{dot}{value_text(r.key, r.value, r.kind, _q, _n)}"
+                           f"</td><td align='right'>{html.escape(limit_text(r, _q, _n))}</td>")
+            out.append("</tr>")
+        out.append("</table>")
+    out.append(f"<h3>{t('res.convention')} {_info('f.mount')}</h3>"
+               "<table cellspacing='0' cellpadding='3'>")
+    for key, value in length_convention(ev):
+        out.append(f"<tr><td>{label(key, es)}</td><td align='right'>"
+                   f"{fmt_quantity(value, QuantityKind.LENGTH)}</td></tr>")
+    out.append(f"</table><p><small>{t('res.convention_note')}</small></p>")
+    return "".join(out)
+
+
 class ResultsPanel(QWidget):
     """Muestra una :class:`Evaluation`."""
 
@@ -101,9 +164,16 @@ class ResultsPanel(QWidget):
         self.table.horizontalHeader().setStretchLastSection(True)
         self.cases = QTableWidget(0, 0)
         self.cases.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.cases.horizontalHeader().sectionClicked.connect(self._case_header_clicked)
+        self.table.cellDoubleClicked.connect(self._check_clicked)
+        self._check_ids: list[str] = []
         self.notes = QTextBrowser()
         self.advice = QTextBrowser()
         self.trace = QTextBrowser()
+        self.overview = QTextBrowser()
+        self.overview.setOpenLinks(False)
+        self.overview.anchorClicked.connect(
+            lambda url: show_card(url.toString().removeprefix("card:"), self))
         self.alt_list = QListWidget()
         self.btn_alt = QPushButton(t("act.optimize"))
         self.btn_apply = QPushButton(t("res.apply"))
@@ -122,6 +192,7 @@ class ResultsPanel(QWidget):
         self._alternatives: list[Alternative] = []
 
         self.tabs = QTabWidget()
+        self.tabs.addTab(self.overview, t("res.overview"))
         self.tabs.addTab(self.table, t("panel.results"))
         self.tabs.addTab(self.cases, t("res.summary"))
         self.tabs.addTab(self.advice, t("res.advice"))
@@ -146,6 +217,7 @@ class ResultsPanel(QWidget):
         self.notes.clear()
         self.advice.clear()
         self.trace.clear()
+        self.overview.clear()
         self.set_alternatives([])
 
     def show_evaluation(self, ev: Evaluation) -> None:
@@ -182,6 +254,7 @@ class ResultsPanel(QWidget):
         self.notes.setPlainText("\n\n".join(notes) if notes else "—")
         self._fill_advice(ev)
         self._fill_trace(ev)
+        self._fill_overview(ev)
 
     def _fill_advice(self, ev: Evaluation) -> None:
         """Advertencias y recomendaciones complementarias, con su fuente."""
@@ -205,6 +278,10 @@ class ResultsPanel(QWidget):
         idx = self.tabs.indexOf(self.advice)
         self.tabs.setTabText(idx, t("res.advice") + (f" ({worst})" if worst else ""))
 
+    def _fill_overview(self, ev: Evaluation) -> None:
+        """Estado ASME por tema, resultados calculados por caso y convención de largos."""
+        self.overview.setHtml(overview_html(ev))
+
     def _fill_checks(self, checks: list[CheckResult]) -> None:
         heads = [t("res.criterion"), t("res.case"), t("res.value"), t("res.limit"),
                  t("res.margin"), t("res.ref")]
@@ -212,11 +289,12 @@ class ResultsPanel(QWidget):
         order = {CheckStatus.FAIL: 0, CheckStatus.WARNING: 1, CheckStatus.PASS: 2,
                  CheckStatus.NOT_APPLICABLE: 3}
         rows = sorted(checks, key=lambda c: (order[c.status], c.margin_pct))
+        self._check_ids = [c.criterion_id for c in rows]
         self.table.setRowCount(len(rows))
         for r, c in enumerate(rows):
             name = QTableWidgetItem(f"● {criterion_name(c.criterion_id)}")
             name.setForeground(QBrush(QColor(STATUS_COLORS[c.status])))
-            name.setToolTip(tr(c.message_key, STATE.language))
+            name.setToolTip(tr(c.message_key, STATE.language) + "\n\n" + t("res.card_hint"))
             plain = c.criterion_id == "scope" or c.status is CheckStatus.NOT_APPLICABLE
             margin = "—" if plain else f"{fmt(c.margin_pct, MARGIN_DECIMALS)} %"
             values = [scope_label(c.flow_case),
@@ -231,13 +309,23 @@ class ResultsPanel(QWidget):
                                           | Qt.AlignmentFlag.AlignVCenter)
                 self.table.setItem(r, col, item)
 
+    def _check_clicked(self, row: int, _col: int) -> None:
+        if 0 <= row < len(self._check_ids):
+            show_card(self._check_ids[row], self)
+
+    def _case_header_clicked(self, col: int) -> None:
+        item = self.cases.horizontalHeaderItem(col)
+        if item is not None:
+            show_card(item.text().removesuffix(" ⓘ"), self)
+
     def _fill_cases(self, ev: Evaluation) -> None:
         res = ev.result
         assert res is not None
         heads = ["V", "Re", "N_S", "f_s", "f_n", "H_c", "f_n,c", "N_Sc", "f_s / f_n,c",
                  "V_IR"]
         self.cases.setColumnCount(len(heads))
-        self.cases.setHorizontalHeaderLabels(heads)
+        self.cases.setHorizontalHeaderLabels([f"{h} ⓘ" for h in heads])
+        self.cases.horizontalHeader().setToolTip(t("res.card_hint"))
         self.cases.setRowCount(len(res.cases))
         self.cases.setVerticalHeaderLabels([scope_label(c.scope) for c in res.cases])
         for r, c in enumerate(res.cases):

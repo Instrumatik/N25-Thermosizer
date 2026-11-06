@@ -46,7 +46,7 @@ def logo_path() -> Path:
     """Logo de la empresa para el rótulo."""
     from thermowell_sizer.ui.assets import asset_path
 
-    return asset_path("logo_instrumatik.png")
+    return asset_path("logo_tws.png")
 
 
 STYLES: Final = {

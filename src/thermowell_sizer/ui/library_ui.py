@@ -30,7 +30,7 @@ from PySide6.QtWidgets import (
 
 from thermowell_sizer.core.units import QuantityKind
 from thermowell_sizer.data import seed_tables
-from thermowell_sizer.data.database import Library, MaterialInfo
+from thermowell_sizer.data.database import Library, MaterialInfo, normalize_text
 from thermowell_sizer.data.reference import REFERENCE_TABLES, RefTable
 from thermowell_sizer.data.reference import text as ref_text
 from thermowell_sizer.data.selection import (
@@ -40,6 +40,8 @@ from thermowell_sizer.data.selection import (
     recommend_materials,
 )
 from thermowell_sizer.i18n import Language, tr
+from thermowell_sizer.infocards.content import CARDS
+from thermowell_sizer.infocards.render import search_text
 from thermowell_sizer.ui.state import STATE
 from thermowell_sizer.ui.text import t
 from thermowell_sizer.ui.widgets import QuantityEdit, fmt, fmt_quantity
@@ -319,6 +321,22 @@ def reference_html(table: RefTable, es: bool) -> str:
             f"<p><i>{escape(ref_text(table.note, es))}</i></p>")
 
 
+def search_cards(text: str, es: bool, limit: int = 8) -> list[tuple[str, str]]:
+    """Fichas «ⓘ» que coinciden con el texto (título primero, luego contenido)."""
+    query = normalize_text(text.strip())
+    if len(query) < 2:
+        return []
+    scored: list[tuple[float, str, str]] = []
+    for cid, card in CARDS.items():
+        title = card.title[0 if es else 1]
+        if query in normalize_text(" ".join(card.title)):
+            scored.append((1.0, cid, title))
+        elif query in normalize_text(search_text(card)):
+            scored.append((0.6, cid, title))
+    scored.sort(key=lambda s: -s[0])
+    return [(cid, title) for _, cid, title in scored[:limit]]
+
+
 class SearchPalette(QDialog):
     """Buscador global (Ctrl+K) con tolerancia a errores de escritura."""
 
@@ -343,6 +361,10 @@ class SearchPalette(QDialog):
         self.results.clear()
         kinds = {"material": "🔩", "coating": "🛡", "fluid": "💧", "glossary": "📖",
                  "standard": "📘"}
+        for cid, title in search_cards(text, _es()):
+            item = QListWidgetItem(f"ⓘ {title}")
+            item.setData(Qt.ItemDataRole.UserRole, ("card", cid))
+            self.results.addItem(item)
         for hit in self.library.search(text):
             item = QListWidgetItem(f"{kinds.get(hit.kind, '•')} {hit.title}")
             item.setData(Qt.ItemDataRole.UserRole, (hit.kind, hit.ref_id))

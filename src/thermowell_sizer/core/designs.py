@@ -335,3 +335,54 @@ def load_profiles(folder: Path | None) -> list[ClientProfile]:
         except ValueError:
             continue
     return out
+
+
+# --- Tamaños de conexión ---------------------------------------------------------------
+CONNECTION_SIZES: Final[dict[ConnectionType, tuple[str, ...]]] = {
+    ConnectionType.THREADED: ("1/2 NPT", "3/4 NPT", "1 NPT", "1-1/4 NPT", "1-1/2 NPT"),
+    ConnectionType.FLANGED: ("1", "1-1/2", "2", "3"),
+    ConnectionType.VAN_STONE: ("1", "1-1/2", "2", "3"),
+    ConnectionType.SOCKET_WELD: ("3/4", "1", "1-1/4", "1-1/2", "2"),
+    ConnectionType.WELD_IN: ("3/4", "1", "1-1/4", "1-1/2", "2"),
+    ConnectionType.SANITARY: ("1-1/2 clamp", "2 clamp", "3 clamp"),
+}
+"""Tamaños de conexión habituales por tipo."""
+
+SUGGESTED_SIZE: Final[dict[ConnectionType, tuple[tuple[float, str], ...]]] = {
+    # (NPS de línea desde, tamaño sugerido); se toma la última fila cuyo NPS es ≤ al de línea
+    ConnectionType.THREADED: ((0.0, "3/4 NPT"), (3.0, "1 NPT")),
+    ConnectionType.FLANGED: ((0.0, "1"), (3.0, "1-1/2"), (24.0, "2")),
+    ConnectionType.VAN_STONE: ((0.0, "1"), (3.0, "1-1/2"), (24.0, "2")),
+    ConnectionType.SOCKET_WELD: ((0.0, "3/4"), (3.0, "1")),
+    ConnectionType.WELD_IN: ((0.0, "1"), (6.0, "1-1/2")),
+    ConnectionType.SANITARY: ((0.0, "1-1/2 clamp"), (4.0, "2 clamp")),
+}
+"""Tamaño sugerido según el NPS de la línea (práctica habitual; editable por el usuario)."""
+
+SIZE_TABLE_FILE: Final = "tamanos_conexion.json"
+
+
+def suggested_connection_size(connection: ConnectionType, nps: str,
+                              folder: Path | None = None) -> str | None:
+    """Tamaño de conexión sugerido para la línea, o ``None`` si el NPS no es numérico.
+
+    Si ``folder`` contiene ``tamanos_conexion.json`` ({"flanged": [[0, "1"], [3, "1-1/2"]]}),
+    esa tabla reemplaza a la de fábrica para los tipos que defina.
+    """
+    value = _nps_value(nps)
+    if math.isnan(value):
+        return None
+    table = SUGGESTED_SIZE[connection]
+    if folder is not None and (folder / SIZE_TABLE_FILE).is_file():
+        try:
+            custom = json.loads((folder / SIZE_TABLE_FILE).read_text(encoding="utf-8"))
+            rows = custom.get(connection.value)
+            if rows:
+                table = tuple((float(a), str(b)) for a, b in rows)
+        except (OSError, ValueError, TypeError, AttributeError):
+            pass
+    size = table[0][1]
+    for start, candidate in sorted(table):
+        if value >= start:
+            size = candidate
+    return size

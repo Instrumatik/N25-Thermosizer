@@ -215,20 +215,20 @@ SKETCH_LABELS_ES: Final[dict[str, str]] = {
     "I": "I · Largo de rosca", "T": "T · Extensión", "E": "E · Espesor de brida",
     "bore": "Largo del agujero", "total": "Largo total", "t": "t · punta",
     "Ls": "Ls · Tramo reducido", "L0": "L0 · Protegido", "A": "Ø raíz A",
-    "B": "Ø punta B", "d": "Ø agujero d", "head": '1/2" NPT (cabezal)',
+    "B": "Ø punta B", "d": "Ø agujero d", "head": "Cabezal",
     "weld": "Soldadura", "pipe": "Pared interna de la tubería", "flow": "Flujo",
     "socket": "Socket weld", "weld_in": "Para soldar", "van_stone": "Van Stone",
-    "sanitary": "Sanitaria", "threaded": "NPT", "flanged": "Brida",
+    "sanitary": "Conexión sanitaria", "threaded": "Rosca NPT", "flanged": "Brida del termopozo",
 }
 SKETCH_LABELS_EN: Final[dict[str, str]] = {
     "U": "U · Insertion length", "L": "L · Unsupported length",
     "I": "I · Thread length", "T": "T · Lag extension", "E": "E · Flange thickness",
     "bore": "Bore depth", "total": "Overall length", "t": "t · tip",
     "Ls": "Ls · Reduced section", "L0": "L0 · Shielded", "A": "Root Ø A",
-    "B": "Tip Ø B", "d": "Bore Ø d", "head": '1/2" NPT (head)',
+    "B": "Tip Ø B", "d": "Bore Ø d", "head": "Head",
     "weld": "Weld", "pipe": "Pipe inside wall", "flow": "Flow",
     "socket": "Socket weld", "weld_in": "Weld-in", "van_stone": "Van Stone",
-    "sanitary": "Sanitary", "threaded": "NPT", "flanged": "Flange",
+    "sanitary": "Sanitary", "threaded": "NPT thread", "flanged": "Thermowell flange",
 }
 
 
@@ -252,7 +252,7 @@ def build_sketch(inp: CalcInput, tx: SketchText) -> Sketch:
         x = HEX_LENGTH
         if lag > 0:
             sk.polys.append(_rect(x, x + lag, thread_r * 0.9, Fill.SECTION))
-            sk.hdims.append(HDim(x, x + lag, -2, f"{tx.lab('T')} = {tx.length(lag)}"))
+            sk.hdims.append(HDim(x, x + lag, -2, tx.lab("T")))
             x += lag
         conn_start = x
         sk.polys.append(_rect(x, x + thread_len, thread_r, Fill.SECTION))
@@ -264,8 +264,8 @@ def build_sketch(inp: CalcInput, tx: SketchText) -> Sketch:
                                                                 sgn * thread_r * 1.06),
                                          "thread"))
         sk.hdims.append(HDim(x, x + thread_len, -1,
-                             f"{tx.lab('I')} = {tx.length(thread_len)}"))
-        conn_text = f'{conn.size or size + chr(34)} {tx.lab("threaded")}'
+                             tx.lab("I")))
+        conn_text = tx.lab("threaded")
         x += thread_len
         conn_r = thread_r
     elif conn.type in (ConnectionType.FLANGED, ConnectionType.VAN_STONE,
@@ -278,7 +278,7 @@ def build_sketch(inp: CalcInput, tx: SketchText) -> Sketch:
         sk.polys.append(_rect(0.0, hub_len, hub_r, Fill.SECTION))
         if lag > 0:
             sk.hdims.append(HDim(hub_len - lag, hub_len, -2,
-                                 f"{tx.lab('T')} = {tx.length(lag)}"))
+                                 tx.lab("T")))
         x = hub_len
         conn_start = x - VAN_STONE_COLLAR
         e = e_mm * MM
@@ -294,18 +294,17 @@ def build_sketch(inp: CalcInput, tx: SketchText) -> Sketch:
                                       (x - VAN_STONE_COLLAR, y_out), "dashed"),
                                Stroke((x - VAN_STONE_COLLAR - e, y_in),
                                       (x - VAN_STONE_COLLAR - e, y_out), "dashed")]
-            conn_text = f'{tx.lab("van_stone")} {conn.size} {cls}#'
+            conn_text = tx.lab("van_stone")
         else:
             fl_r = min(od_mm / 2 * MM, max(FLANGE_DRAW_MAX_RATIO * g.A, 30 * MM))
             sk.polys.append(_rect(x, x + e, fl_r, Fill.SECTION))
-            sk.hdims.append(HDim(x, x + e, -1, f"{tx.lab('E')} ≈ {tx.length(e)}"))
+            sk.hdims.append(HDim(x, x + e, -1, tx.lab("E")))
             x += e
             if conn.face is FlangeFace.RF:
                 rf_r = min(RAISED_FACE.get(size, 73.2) / 2 * MM, fl_r * 0.6)
                 rf_t = (1.6 if cls <= 300 else 6.4) * MM
                 sk.polys.append(_rect(x - rf_t, x, rf_r, Fill.SECTION))
-            face = conn.face.value if conn.face else ""
-            conn_text = f"{tx.lab('flanged')} {conn.size} {cls}# {face}".strip()
+            conn_text = tx.lab("flanged")
         conn_r = fl_r
     else:
         socket = conn.type is ConnectionType.SOCKET_WELD
@@ -318,8 +317,7 @@ def build_sketch(inp: CalcInput, tx: SketchText) -> Sketch:
         for sgn in (1, -1):
             sk.polys.append(Poly(((x - weld, sgn * body_r), (x, sgn * body_r),
                                   (x, sgn * (body_r + weld))), Fill.PLAIN))
-        conn_text = tx.lab("socket" if socket else "weld_in") + (f" {conn.size}"
-                                                                   if conn.size else "")
+        conn_text = tx.lab("socket" if socket else "weld_in")
         conn_r = body_r + weld
 
     conn_x = x - (x - conn_start) / 2
@@ -351,31 +349,31 @@ def build_sketch(inp: CalcInput, tx: SketchText) -> Sketch:
     sk.strokes.append(Stroke((-3 * MM, 0.0), (tip + 3 * MM, 0.0), "center"))
 
     # Cotas horizontales
-    sk.hdims.append(HDim(x0, tip, 1, f"{tx.lab('U')} = {tx.length(u)}"))
-    sk.hdims.append(HDim(bore_end, tip, 2, f"{tx.lab('t')} = {tx.length(g.t)}",
+    sk.hdims.append(HDim(x0, tip, 1, tx.lab("U")))
+    sk.hdims.append(HDim(bore_end, tip, 2, tx.lab("t"),
                          outside=True))
-    sk.hdims.append(HDim(0.0, bore_end, 2, f"{tx.lab('bore')} = {tx.length(bore_end)}"))
-    sk.hdims.append(HDim(0.0, tip, 3, f"{tx.lab('total')} = {tx.length(tip)}"))
+    sk.hdims.append(HDim(0.0, bore_end, 2, tx.lab("bore")))
+    sk.hdims.append(HDim(0.0, tip, 3, tx.lab("total")))
     top = -3 if lag > 0 else -2
     if g.profile is ShankProfile.STEPPED:
-        sk.hdims.append(HDim(tip - g.Ls, tip, top, f"{tx.lab('Ls')} = {tx.length(g.Ls)}"))
+        sk.hdims.append(HDim(tip - g.Ls, tip, top, tx.lab("Ls")))
         top -= 1
     if abs(g.L - u) > 1e-6:
-        sk.hdims.append(HDim(tip - g.L, tip, top, f"{tx.lab('L')} = {tx.length(g.L)}"))
+        sk.hdims.append(HDim(tip - g.L, tip, top, tx.lab("L")))
         top -= 1
     if g.L0 > 0:
         sk.hdims.append(HDim(tip - g.L, tip - g.L + g.L0, top,
-                             f"{tx.lab('L0')} = {tx.length(g.L0)}"))
+                             tx.lab("L0")))
 
     # Diámetros
     gap = max(rb * 1.4, 3 * MM)
-    sk.vdims.append(VDim(tip + gap, rb, f"{tx.lab('B')} = {tx.diameter(g.B)}"))
+    sk.vdims.append(VDim(tip + gap, rb, tx.lab("B")))
     top_dims = [d.row for d in sk.hdims if d.row < 0]
     first_note = min(top_dims, default=0) - 1
     sk.leaders.append(Leader(x0 + (tip - x0) * 0.12, ra, first_note,
-                             f"{tx.lab('A')} = {tx.diameter(g.A)}"))
+                             tx.lab("A")))
     sk.leaders.append(Leader(x0 + (bore_end - x0) * 0.55, rd * 0.5, first_note - 1,
-                             f"{tx.lab('d')} = {tx.diameter(g.d)}"))
+                             tx.lab("d")))
     sk.leaders.append(Leader(HEAD_THREAD_DEPTH * 0.5, head_r, first_note - 2, tx.lab("head")))
     sk.leaders.append(Leader(conn_x, conn_r * 0.95, first_note - 3, conn_text))
 

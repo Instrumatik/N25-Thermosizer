@@ -1,5 +1,43 @@
 # Cambios
 
+## 1.2.0 (2026-11-06)
+
+Revisión del usuario sobre la versión 1.1.0.
+
+- **Resumen ASME** (pestaña nueva, página 2 de la hoja de datos y comienzo de la
+  memoria PDF y Word): estado por tema (erosión: no erosivo / vigilar / erosivo;
+  frecuencia de estela: cumple / riesgo de resonancia; esfuerzos; presión y rating;
+  global: cumple / requiere revisión de ingeniería / no cumple) y **resultados
+  calculados** por caso con su límite: caudal volumétrico real, V, V_e (API RP 14E),
+  V/V_e, Re, Strouhal, f_s, f_n,c, relación de frecuencias, esfuerzo estacionario,
+  dinámico y de von Mises.
+- **Datos de entrada** al inicio de la memoria: los 15 datos de la planilla con su
+  valor, si son cargados o calculados y si entran en el cálculo ASME.
+- **Convención de largos**: equivalencia entre la planilla (L = Hs + inserción) y el
+  programa (U = L desde la cara de la brida), en pantalla y en la memoria.
+- **Fichas ⓘ** en cada dato, opción y resultado (105 fichas en español e inglés) con
+  explicación, umbrales, fórmulas, diagramas, esquemas de instalación, curvas con los
+  datos del tag y ejemplo resuelto; búsqueda con Ctrl+K y prueba automática de que
+  ningún campo quede sin ficha.
+- **Brida de montaje** en lugar de «tobera»: Hs se mide desde la superficie externa
+  de la tubería y el programa suma el espesor de pared; desglose Hs + pared +
+  inmersión = U en pantalla y en la hoja de datos. Esquema de montaje en la ayuda.
+- **Tuberías**: todos los NPS de 1/8" a 48" y todos los schedules de ASME B36.10M y
+  B36.19M, ordenados por espesor; opción «Otro» con OD y espesor a mano. Los archivos
+  viejos completan el espesor desde la tabla.
+- **Fluido** en dos listas encadenadas (tipo y fluido), con «(Estado Líquido)» y
+  «(Estado Vapor)», y aviso si la fase calculada no coincide.
+- **Tamaño de conexión** en lista según el tipo, con el sugerido para el NPS de la
+  línea (tabla editable en `tamanos_conexion.json`); clase y cara solo para bridadas
+  y Van Stone.
+- **E y S manuales** por tag, anotados en la memoria.
+- **Plano** sin valores numéricos ni signos igual en las cotas; etiquetas «Cabezal»,
+  «Brida del termopozo» y «Rosca NPT». Números 100 a 108 centrados en la tabla ASME.
+- **Logo nuevo** TWS · Thermosizer by INSTRUMATIK S.A.S en los reportes, la ventana,
+  la barra de tareas, Acerca de, Licencia, el instalador y los archivos .tws (ícono
+  .ico de 16 a 256 px, con la «T» sola en los tamaños chicos).
+- Ejemplos regenerados con espesor de pared, fase correcta y Hs en el ejemplo 3.
+
 ## 1.1.0 (2026-11-06)
 
 Mejoras a partir de la planilla de cálculo, una especificación de operadora y un

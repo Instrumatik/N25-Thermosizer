@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QDialog,
@@ -19,6 +21,7 @@ from PySide6.QtWidgets import (
 )
 
 from thermowell_sizer import licensing
+from thermowell_sizer.ui.assets import asset_path
 from thermowell_sizer.ui.state import STATE
 from thermowell_sizer.ui.text import t
 
@@ -54,6 +57,11 @@ class LicenseDialog(QDialog):
         self.setWindowTitle(t("lic.title"))
         self.setMinimumWidth(520)
         lay = QVBoxLayout(self)
+        logo = QLabel()
+        pix = QPixmap(str(asset_path("logo_tws.png")))
+        if not pix.isNull():
+            logo.setPixmap(pix.scaledToWidth(180, Qt.TransformationMode.SmoothTransformation))
+        lay.addWidget(logo, 0, Qt.AlignmentFlag.AlignHCenter)
         self.status = QLabel()
         self.status.setWordWrap(True)
         lay.addWidget(self.status)

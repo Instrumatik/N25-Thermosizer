@@ -152,8 +152,26 @@ UI: Final[dict[str, tuple[str, str]]] = {
     "f.pipe_custom": ("Diámetro interno manual", "Manual inner diameter"),
     "f.orientation": ("Orientación", "Orientation"),
     "f.insulation": ("Espesor de aislamiento", "Insulation thickness"),
-    "f.nozzle": ("Longitud de tobera", "Nozzle length"),
-    "f.nozzle_id": ("Diámetro interno de tobera (opcional)", "Nozzle inside diameter (optional)"),
+    "f.nozzle": ("Altura de la brida de montaje", "Mounting flange height"),
+    "f.mount": ("Hs, altura de la brida de montaje (cara externa del caño → cara de la brida)",
+                "Hs, mounting flange height (pipe outside surface → flange face)"),
+    "f.mount_sum": ("Hasta la pared interna: Hs {hs} + pared {wall} = {total}",
+                    "To the inside wall: Hs {hs} + wall {wall} = {total}"),
+    "f.u_breakdown": ("U = Hs {hs} + pared {wall} + inmersión {imm} = {u}",
+                      "U = Hs {hs} + wall {wall} + immersion {imm} = {u}"),
+    "f.E_manual": ("E, módulo elástico (vacío = biblioteca)",
+                   "E, elastic modulus (blank = library)"),
+    "f.S_manual": ("S, esfuerzo admisible (vacío = biblioteca)",
+                   "S, allowable stress (blank = library)"),
+    "f.mat_lib": ("Biblioteca a la temperatura de operación: E = {E}, S = {S}",
+                  "Library at operating temperature: E = {E}, S = {S}"),
+    "f.fluid_type": ("Tipo de fluido", "Fluid type"),
+    "f.phase_calc": ("Fase (calculada con P y T)", "Phase (from P and T)"),
+    "f.suggested": ("Sugerido para esta línea: {size}", "Suggested for this line: {size}"),
+    "f.pipe_od": ("Diámetro exterior", "Outside diameter"),
+    "f.wall": ("Espesor de pared", "Wall thickness"),
+    "f.nozzle_id": ("Diámetro interno de la conexión de montaje (opcional)",
+                    "Mounting connection inside diameter (optional)"),
     "f.dimensions": ("Dimensiones", "Dimensions"),
     "f.profile": ("Perfil del vástago", "Shank profile"),
     "f.connection": ("Conexión", "Connection"),
@@ -208,18 +226,18 @@ UI: Final[dict[str, tuple[str, str]]] = {
     "des.not_allowed": ("Este montaje no está permitido por el perfil en una línea de "
                         "{nps}\".", "This mounting is not allowed by the profile on a "
                         "{nps}\" line."),
-    "des.no_nozzle": ("Sin longitud de tobera en el paso Tubería: U se recomienda desde la "
-                      "pared interna. Cárguela para que U la incluya.",
-                      "No nozzle length in the Pipe step: U is recommended from the inner "
-                      "wall. Enter it so that U includes it."),
+    "des.no_nozzle": ("Sin altura de brida de montaje (Hs) en el paso Tubería: U se recomienda "
+                      "desde la pared interna. Cárguela para que U la incluya.",
+                      "No mounting flange height (Hs) in the Pipe step: U is recommended "
+                      "from the inner wall. Enter it so that U includes it."),
     "des.import": ("Importar perfil…", "Import profile…"),
     "des.import_err": ("No se pudo cargar el perfil:\n{err}", "Could not load profile:\n{err}"),
     "des.short_for_design": ("U es corto para un vástago escalonado; considere cónico.",
                              "U is short for a stepped shank; consider tapered."),
     "des.summary": ("Se cargará: {profile}, {conn} {size}, U = L = {U}, A = {A}, B = {B}, "
-                    "d = {d}, t = {t}{extra}. L0 = {L0} (tobera).",
+                    "d = {d}, t = {t}{extra}. L0 = {L0} (brida de montaje).",
                     "Will load: {profile}, {conn} {size}, U = L = {U}, A = {A}, B = {B}, "
-                    "d = {d}, t = {t}{extra}. L0 = {L0} (nozzle)."),
+                    "d = {d}, t = {t}{extra}. L0 = {L0} (mounting flange)."),
     "des.disclaimer": ("Valores típicos de la industria: confirme las cotas con el plano "
                        "del fabricante. El programa verifica la geometría con ASME PTC 19.3 "
                        "TW al aplicar.",
@@ -252,6 +270,22 @@ UI: Final[dict[str, tuple[str, str]]] = {
     "res.margin": ("Margen", "Margin"),
     "res.ref": ("Referencia", "Reference"),
     "res.summary": ("Resumen por caso", "Case summary"),
+    "res.overview": ("Resumen ASME", "ASME overview"),
+    "res.card_hint": ("Doble clic (o clic en el encabezado ⓘ): abre la ficha con la explicación, "
+                      "las fórmulas y un ejemplo.",
+                      "Double-click (or click the ⓘ header): opens the card with the "
+                      "explanation, formulas and an example."),
+    "res.asme_status": ("Estado ASME", "ASME status"),
+    "res.calculated": ("Resultados calculados", "Calculated results"),
+    "res.convention": ("Convención de largos: planilla y programa",
+                       "Length convention: spreadsheet and program"),
+    "res.convention_note": (
+        "La planilla mide la inserción desde la superficie externa de la tubería y suma Hs: "
+        "L = Hs + inserción. El programa mide U = L desde la cara de la brida, que es lo "
+        "mismo. Ambas convenciones dan el mismo largo no soportado.",
+        "The spreadsheet measures insertion from the pipe outer surface and adds Hs: "
+        "L = Hs + insertion. The program measures U = L from the flange face, which is the "
+        "same. Both conventions give the same unsupported length."),
     "res.notes": ("Notas", "Notes"),
     "res.trace": ("Traza de cálculo", "Calculation trace"),
     "res.alternatives": ("Alternativas", "Alternatives"),
@@ -409,7 +443,8 @@ UI: Final[dict[str, tuple[str, str]]] = {
 }
 
 ENUM_TEXT: Final[dict[str, tuple[str, str]]] = {
-    "liquid": ("Líquido", "Liquid"), "gas": ("Gas", "Gas"), "steam": ("Vapor", "Steam"),
+    "liquid": ("Líquido", "Liquid"), "gas": ("Gas", "Gas"),
+    "steam": ("Vapor de agua (steam)", "Steam"),
     "two_phase": ("Bifásico", "Two-phase"),
     "mass_flow": ("Caudal másico", "Mass flow"), "volume_flow": ("Caudal volumétrico",
                                                                   "Volume flow"),
