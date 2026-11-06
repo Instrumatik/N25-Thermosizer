@@ -74,7 +74,9 @@ def test_pipes(lib: Library) -> None:
     assert pipe.dn == 100
     assert pipe.inner_diameter == pytest.approx(4.026 * 0.0254)
     sizes = lib.pipe_sizes()
-    assert sizes[0] == "1/2" and sizes[-1] == "24"
+    assert sizes[0] == "1/8" and sizes[-1] == "48"
+    assert lib.schedules("2") == ["5S", "10S", "40", "40S", "STD", "80", "80S", "XS", "160",
+                                  "XXS"]
     assert "160" in lib.schedules("2")
     with pytest.raises(KeyError):
         lib.pipe("4", "999")

@@ -32,15 +32,18 @@ ADVICE_ES: Final[dict[str, str]] = {
         "tolerancias, dilatación y el espesor real de la tubería."
     ),
     "adv.shielded_length": (
-        "Hay una tobera de {nozzle} pero L0 = 0. Si el vástago dentro de la tobera queda "
+        "La brida de montaje está a {nozzle} de la pared interna pero L0 = 0. Si el vástago "
+        "dentro de la conexión de montaje queda "
         "protegido del flujo, cargue L0 para un cálculo menos conservador."
     ),
     "adv.nozzle_blocked": (
-        "El vástago (A = {a}) no pasa por la tobera (diámetro interno {nozzle_id}). Elija "
+        "El vástago (A = {a}) no pasa por la conexión de montaje (diámetro interno "
+        "{nozzle_id}). Elija "
         "otra conexión o un termopozo más delgado en la raíz."
     ),
     "adv.nozzle_tight": (
-        "Huelgo muy chico entre el vástago (A = {a}) y la tobera ({nozzle_id}): dificulta el "
+        "Huelgo muy chico entre el vástago (A = {a}) y la conexión de montaje "
+        "({nozzle_id}): dificulta el "
         "montaje y puede dañar el termopozo."
     ),
     "adv.sensor_no_fit": (
@@ -125,6 +128,23 @@ ADVICE_ES: Final[dict[str, str]] = {
     "insp.dimensional_short": "Control dimensional, Ra ≤ 0,8 µm",
     "insp.marking_short": "Marcado: tag, material, conexión, rating, colada",
     "insp.calc_report_short": "Memoria ASME PTC 19.3 TW",
+    "adv.phase_is_liquid": (
+        "Con la presión y la temperatura de operación el fluido está LÍQUIDO, no en el estado "
+        "del tipo elegido. Revise el tipo de fluido o las condiciones; el cálculo usa la fase "
+        "real."
+    ),
+    "adv.phase_is_gas": (
+        "Con la presión y la temperatura de operación el fluido es GAS o VAPOR, no líquido. "
+        "Revise el tipo de fluido o las condiciones; el cálculo usa la fase real."
+    ),
+    "adv.phase_is_steam": (
+        "Con la presión y la temperatura de operación el agua está como VAPOR (steam), no "
+        "líquida. Revise el tipo de fluido o las condiciones; el cálculo usa la fase real."
+    ),
+    "adv.phase_is_two_phase": (
+        "Con la presión y la temperatura de operación el fluido está en saturación (bifásico). "
+        "Revise el tipo de fluido o las condiciones."
+    ),
     "adv.title": "Advertencias y recomendaciones",
     "adv.level.critical": "Crítico",
     "adv.level.warning": "Advertencia",
@@ -248,6 +268,22 @@ ADVICE_EN: Final[dict[str, str]] = {
     "insp.dimensional_short": "Dimensional check, Ra ≤ 0.8 µm",
     "insp.marking_short": "Marking: tag, material, connection, rating, heat",
     "insp.calc_report_short": "ASME PTC 19.3 TW calculation report",
+    "adv.phase_is_liquid": (
+        "At the operating pressure and temperature the fluid is LIQUID, not the chosen type. "
+        "Check the fluid type or the conditions; the calculation uses the actual phase."
+    ),
+    "adv.phase_is_gas": (
+        "At the operating pressure and temperature the fluid is GAS or VAPOR, not liquid. "
+        "Check the fluid type or the conditions; the calculation uses the actual phase."
+    ),
+    "adv.phase_is_steam": (
+        "At the operating pressure and temperature the water is STEAM, not liquid. Check the "
+        "fluid type or the conditions; the calculation uses the actual phase."
+    ),
+    "adv.phase_is_two_phase": (
+        "At the operating pressure and temperature the fluid is saturated (two-phase). Check "
+        "the fluid type or the conditions."
+    ),
     "adv.title": "Warnings and recommendations",
     "adv.level.critical": "Critical",
     "adv.level.warning": "Warning",

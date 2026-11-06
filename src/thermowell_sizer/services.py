@@ -11,7 +11,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from thermowell_sizer.core.advisories import Advisory, advise
+from thermowell_sizer.core.advisories import Advisory, AdvisoryLevel, advise
 from thermowell_sizer.core.models import (
     CalcInput,
     CheckStatus,
@@ -50,6 +50,7 @@ from thermowell_sizer.core.units import (
     QuantityKind,
 )
 from thermowell_sizer.data.database import Library
+from thermowell_sizer.data.fluid_groups import phase_mismatch
 from thermowell_sizer.i18n import Language, tr
 from thermowell_sizer.project import ProjectSettings, TagRecord
 from thermowell_sizer.properties.fluids import (
@@ -169,13 +170,18 @@ def resolve_options(
     return options.model_copy(update=update), notes
 
 
+MANUAL_MATERIAL_NOTE = "E y/o S cargados a mano por el usuario"
+
+
 def evaluate(record: TagRecord, library: Library, settings: ProjectSettings) -> Evaluation:
     """Evalúa un tag: propiedades del fluido, material, rating de brida y verificación."""
     inp = record.input
     ev = Evaluation(input=inp, options=record.options)
+    chosen = inp.process.phase
+    detected: Phase | None = None
     if record.auto_properties:
         try:
-            inp, _ = with_fluid_properties(inp, library)
+            inp, detected = with_fluid_properties(inp, library)
             ev.input = inp
         except FluidPropertyError:
             ev.warnings.append("svc.fluid_properties_failed")
@@ -188,6 +194,17 @@ def evaluate(record: TagRecord, library: Library, settings: ProjectSettings) -> 
     except KeyError:
         ev.errors.append("svc.material_unknown")
         return ev
+    ref = inp.thermowell.material
+    if ref.elastic_modulus is not None or ref.allowable_stress is not None:
+        update: dict[str, object] = {}
+        if ref.elastic_modulus is not None:
+            update["elastic_modulus"] = ref.elastic_modulus
+        if ref.allowable_stress is not None:
+            update["allowable_stress"] = ref.allowable_stress
+            update["allowable_stress_design"] = ref.allowable_stress
+        update["source_note"] = (ev.material.source_note + " · " if ev.material.source_note
+                                 else "") + MANUAL_MATERIAL_NOTE
+        ev.material = ev.material.model_copy(update=update)
     ev.options, notes = resolve_options(inp, record.options, library, settings)
     ev.warnings.extend(notes)
     ev.result = verify(inp, ev.material, ev.options)
@@ -195,6 +212,10 @@ def evaluate(record: TagRecord, library: Library, settings: ProjectSettings) -> 
     coating = inp.thermowell.material.coating
     coating_max = next((c[4] for c in library.coatings() if c[0] == coating), None)
     ev.advisories = advise(inp, coating_max_temperature=coating_max)
+    if detected is not None and phase_mismatch(chosen, detected):
+        ev.advisories.insert(0, Advisory(f"adv.phase_is_{detected.value}",
+                                         AdvisoryLevel.WARNING,
+                                         "CoolProp: fase a la presión y temperatura de operación"))
     return ev
 
 

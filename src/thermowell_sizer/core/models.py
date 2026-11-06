@@ -229,9 +229,34 @@ class PipeData(_Model):
     material_id: str = ""
     orientation: MountingOrientation = MountingOrientation.PERPENDICULAR
     insulation_thickness: NonNegative = Field(default=0.0, description="m")
-    nozzle_length: NonNegative = Field(default=0.0, description="Longitud de tobera o niple, m")
+    wall_thickness: NonNegative | None = Field(
+        default=None, description="Espesor de pared de la tubería, m (del schedule o a mano)")
+    mount_height: NonNegative | None = Field(
+        default=None,
+        description="Hs: altura de la brida de montaje, de la cara externa del caño a la cara "
+                    "de la brida, m. Si se indica, define nozzle_length = Hs + pared.")
+    nozzle_length: NonNegative = Field(
+        default=0.0,
+        description="Distancia de la cara de la brida de montaje a la pared interna del caño, m")
     nozzle_inner_diameter: Positive | None = Field(
-        default=None, description="Diámetro interno de la tobera, m (para verificar el paso)")
+        default=None,
+        description="Diámetro interno de la conexión de montaje, m (para verificar el paso)")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _mount_to_inner_wall(cls, data: object) -> object:
+        """Hs (desde la cara externa) + espesor de pared = distancia a la pared interna."""
+        if isinstance(data, dict) and data.get("mount_height") is not None:
+            wall = data.get("wall_thickness") or 0.0
+            data = {**data, "nozzle_length": float(data["mount_height"]) + float(wall)}
+        return data
+
+    @property
+    def outer_diameter(self) -> float | None:
+        """Diámetro exterior, m (si se conoce el espesor)."""
+        if self.wall_thickness is None:
+            return None
+        return self.inner_diameter + 2.0 * self.wall_thickness
 
 
 # --- 4. Termopozo --------------------------------------------------------------------
@@ -309,6 +334,12 @@ class MaterialRef(_Model):
 
     material_id: str = Field(description="p. ej. 'SS316' o 'A105'")
     coating: str = ""
+    elastic_modulus: Positive | None = Field(
+        default=None, description="E a la temperatura de operación cargado a mano, Pa "
+                                  "(None = biblioteca)")
+    allowable_stress: Positive | None = Field(
+        default=None, description="S admisible cargado a mano, Pa, usado a operación y diseño "
+                                  "(None = biblioteca)")
 
 
 class Thermowell(_Model):

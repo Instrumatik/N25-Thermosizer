@@ -78,6 +78,10 @@ def sections(rep: TagReport) -> list[tuple[str, list[Row]]]:
         if c[0] == tw.material.coating:
             coating = c[1] if f.lang.value == "es" else c[2]
     conn = tw.connection
+    wall = pipe.wall_thickness or 0.0
+    hs = (pipe.mount_height if pipe.mount_height is not None
+          else max(pipe.nozzle_length - wall, 0.0))
+    u = g.U if g.U is not None else g.L
     rating = (f"{conn.rating_class} / {conn.face.value if conn.face else '—'}"
               if conn.type in (ConnectionType.FLANGED, ConnectionType.VAN_STONE) else "—")
     cases = "; ".join(
@@ -111,7 +115,8 @@ def sections(rep: TagReport) -> list[tuple[str, list[Row]]]:
              if pipe.nominal_size else "—"),
             (f.t("pipe_id"), f.q(pipe.inner_diameter, QuantityKind.DIAMETER)),
             (f.t("orientation"), _enum(rep, pipe.orientation.value)),
-            (f.t("nozzle"), f.q(pipe.nozzle_length, QuantityKind.LENGTH)),
+            (f.t("wall"), f.q(pipe.wall_thickness, QuantityKind.LENGTH)),
+            (f.t("nozzle"), f.q(hs, QuantityKind.LENGTH)),
         ]),
         (f.t("sec.thermowell"), [
             (f.t("construction"), f.t("bar_stock")),
@@ -120,6 +125,9 @@ def sections(rep: TagReport) -> list[tuple[str, list[Row]]]:
             (f.t("connection"), f"{_enum(rep, conn.type.value)} {conn.size}".strip()),
             (f.t("rating"), rating),
             (f.t("U"), f.q(g.U, QuantityKind.LENGTH)),
+            (f.t("u_breakdown"), f.t("u_breakdown_value", hs=f.q(hs, QuantityKind.LENGTH),
+                                     wall=f.q(wall, QuantityKind.LENGTH),
+                                     imm=f.q(u - pipe.nozzle_length, QuantityKind.LENGTH))),
             (f.t("L"), f.q(g.L, QuantityKind.LENGTH)),
             (f.t("A"), f.q(g.A, QuantityKind.DIAMETER)),
             (f.t("B"), f.q(g.B, QuantityKind.DIAMETER)),
@@ -187,6 +195,9 @@ def _kv_table(sections_: list[tuple[str, list[Row]]], width: float, start: int =
                   ("FONT", (0, len(data)), (-1, len(data)), FONT_BOLD, 7.4)]
         data.append([title, "", ""])
         for label, value in rows:
+            style += [("ALIGN", (0, len(data)), (0, len(data)), "CENTER"),
+                      ("LEFTPADDING", (0, len(data)), (0, len(data)), 0.5),
+                      ("RIGHTPADDING", (0, len(data)), (0, len(data)), 0.5)]
             data.append([str(n), Paragraph(escape(label), STYLES["cell"]),
                          Paragraph(escape(value), STYLES["cell"])])
             n += 1

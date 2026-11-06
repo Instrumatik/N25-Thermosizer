@@ -582,6 +582,7 @@ class MainWindow(QMainWindow):
         self.evaluations[self.current] = ev
         if rec.auto_properties:
             self.editor.show_properties(ev.input)
+        self.editor.show_material_hint(ev.input)
         self.results.show_evaluation(ev)
         self._chart_if_visible(ev)
         if ev.status is not None and ev.status != rec.last_status:
