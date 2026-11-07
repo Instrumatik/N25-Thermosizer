@@ -24,10 +24,16 @@ from thermowell_sizer.infocards.guides import (
 Bi = tuple[str, str]
 _NO: Final[Bi] = ("", "")
 
-SECTIONS: Final = ("what", "role", "affects", "limits", "compare", "interpret", "actions",
-                   "reference", "units")
+SECTIONS: Final = ("what", "essence", "role", "why", "affects", "limits", "compare", "interpret",
+                   "actions", "worked", "mistakes", "reference", "units")
+DEEP_SECTIONS: Final = ("essence", "why", "worked", "mistakes")
+"""Secciones de profundidad que toda ficha debe tener (revisión 1.5)."""
 SECTION_TITLES: Final[dict[str, Bi]] = {
     "what": ("Qué es", "What it is"),
+    "essence": ("En esencia: qué pasa y por qué", "In essence: what happens and why"),
+    "why": ("Por qué importa", "Why it matters"),
+    "worked": ("Ejemplo numérico", "Numerical example"),
+    "mistakes": ("Errores comunes", "Common mistakes"),
     "role": ("Qué hace en el programa", "What it does in the program"),
     "affects": ("Resultados que afecta", "Results it affects"),
     "limits": ("Umbrales y límites", "Thresholds and limits"),
@@ -59,6 +65,12 @@ class Card:
     actions: Bi = _NO
     reference: Bi = _NO
     units: Bi = _NO
+    essence: Bi = _NO
+    """Mecanismo físico, químico o práctico detrás del término."""
+    why: Bi = _NO
+    worked: Bi = _NO
+    """Ejemplo numérico (o práctico) explicado paso a paso."""
+    mistakes: Bi = _NO
     formulas: tuple[str, ...] = ()
     diagram: str = ""
     """``tw:<cota>``, ``mount``, ``orientation`` o ``connection``."""
@@ -1166,3 +1178,12 @@ def card_for(key: str) -> Card | None:
         if key.startswith(prefix):
             return CARDS[f"crit.{prefix}"]
     return CARDS.get(f"crit.{key}")
+
+
+def _apply_deep() -> None:
+    from thermowell_sizer.infocards.deep import apply  # importación diferida: evita el ciclo
+
+    apply(CARDS, Card)
+
+
+_apply_deep()
