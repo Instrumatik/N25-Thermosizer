@@ -12,6 +12,12 @@ from typing import Final
 
 from thermowell_sizer.core.advisories import DIAL_RANGES_C
 from thermowell_sizer.core.designs import DESIGN_NAMES, STANDARD_U, TYPICAL_DESIGNS
+from thermowell_sizer.infocards.guides import (
+    CONNECTION_NOTE,
+    CONNECTION_TABLE,
+    PROFILE_COST_NOTE,
+    PROFILE_TABLE,
+)
 
 Bi = tuple[str, str]
 """Texto bilingüe (es, en)."""
@@ -316,8 +322,18 @@ INSTALLATION = RefTable(
     ),
 )
 
+CONNECTION_USE: Final = RefTable(
+    "connection_use", _b("Tipos de conexión: dónde se usan y dónde no",
+                         "Connection types: where to use them and where not"),
+    CONNECTION_NOTE, CONNECTION_TABLE[0], CONNECTION_TABLE[1:])
+PROFILE_GUIDE: Final = RefTable(
+    "profile_guide", _b("Perfiles del vástago: uso, límites y costo relativo",
+                        "Shank profiles: use, limits and relative cost"),
+    PROFILE_COST_NOTE, PROFILE_TABLE[0], PROFILE_TABLE[1:])
+
 REFERENCE_TABLES: Final[tuple[RefTable, ...]] = (
-    THERMOWELL_TYPES, _designs_table(), INSTALLATION, CORROSION_GUIDE, THERMOCOUPLE_COLORS,
+    THERMOWELL_TYPES, CONNECTION_USE, PROFILE_GUIDE, _designs_table(), INSTALLATION,
+    CORROSION_GUIDE, THERMOCOUPLE_COLORS,
     THERMOCOUPLE_TOLERANCES, RTD_CLASSES, RTD_WIRING, DIAL_SCALES,
 )
 

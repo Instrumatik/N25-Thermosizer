@@ -20,6 +20,7 @@ from thermowell_sizer.core.advisories import (
     BORE_GAP_MAX,
     BORE_GAP_MIN,
     EROSION_WATCH_RATIO,
+    VESSEL_MIN_IMMERSION,
     advise,
     erosional_velocity,
 )
@@ -40,6 +41,7 @@ from thermowell_sizer.core.models import (
     ConnectionType,
     FlangeFace,
     MaterialRef,
+    PipeData,
     ShankProfile,
     ThermowellGeometry,
 )
@@ -82,6 +84,8 @@ MATERIAL_PREFERENCE: Final = ("SS316", "SS304", "SS321", "SS347", "F11", "F22", 
 UTILITY_FLUIDS: Final = ("water", "air", "nitrogen")
 THREADED_MAX_P: Final = 20e5
 THREADED_MAX_T: Final = 473.15
+VESSEL_SIZE_NPS: Final = "24"
+"""NPS de referencia para el tamaño de conexión en recipientes."""
 WELD_IN_MIN_CLASS: Final = 1500
 NOZZLE_CLEARANCE: Final = 1.5e-3
 """Holgura radial mínima entre Ø A y el diámetro interno de la conexión de montaje."""
@@ -313,13 +317,21 @@ def _choose_connection(inp: CalcInput, library: Library, barometric: float,
                   "roscas en fluidos peligrosos, a presión o a temperatura.",
                   "Flanged: process service; it allows removal and inspection and avoids "
                   "threads with hazardous, pressurized or hot fluids.")
-    size = suggested_connection_size(ctype, pipe.nominal_size or "", folder) or ""
+    if pipe.is_vessel:  # recipiente: el tamaño de una línea grande
+        size = suggested_connection_size(ctype, VESSEL_SIZE_NPS, folder) or ""
+        size_why = _bi("Tamaño habitual para recipientes y tanques (el de una línea grande en "
+                       "la tabla de tamaños sugeridos, editable).",
+                       "Usual size for vessels and tanks (that of a large line in the "
+                       "suggested size table, editable).")
+    else:
+        size = suggested_connection_size(ctype, pipe.nominal_size or "", folder) or ""
+        size_why = _bi(
+            f"Tamaño habitual para una línea NPS {pipe.nominal_size} (tabla de tamaños "
+            "sugeridos, editable).", f"Usual size for an NPS {pipe.nominal_size} line "
+            "(suggested size table, editable).")
     out.append(Decision("connection", "f.connection", CONNECTION_NAMES.get(
         ctype.value, (ctype.value, ctype.value)), None, why))
-    out.append(Decision("connection", "f.conn_size", size or "—", None, _bi(
-        f"Tamaño habitual para una línea NPS {pipe.nominal_size} (tabla de tamaños sugeridos, "
-        "editable).", f"Usual size for an NPS {pipe.nominal_size} line (suggested size "
-        "table, editable).")))
+    out.append(Decision("connection", "f.conn_size", size or "—", None, size_why))
     rating: int | None = None
     face: FlangeFace | None = None
     if ctype in (ConnectionType.FLANGED, ConnectionType.VAN_STONE):
@@ -397,7 +409,8 @@ def _choose_geometry(rec: TagRecord, inp: CalcInput, library: Library,
     designs = _designs_for(inp.thermowell.connection.type)
     tried: list[tuple[int, float, float, str, CalcInput]] = []
     first_pass: tuple[TypicalDesign, float, CalcInput] | None = None
-    for u in _u_candidates(pipe.inner_diameter, nozzle):
+    span = _immersion_span(pipe)
+    for u in _u_candidates(span, nozzle):
         for design in designs:
             for bore in bores:
                 if bore not in design.diameters:
@@ -417,13 +430,13 @@ def _choose_geometry(rec: TagRecord, inp: CalcInput, library: Library,
                     status, 3)
                 tried.append((rank, -margin, -u, design.id, cand))
                 if rank == 0 and _immersion_ok(cand):
-                    return _geometry_decisions(cand, design, u, nozzle, pipe.inner_diameter,
+                    return _geometry_decisions(cand, design, u, nozzle, span,
                                                out, passed=True)
                 if rank == 0 and first_pass is None:
                     first_pass = (design, u, cand)
     if first_pass is not None:  # cumple ASME pero sin la inmersión recomendada
         design, u, cand = first_pass
-        return _geometry_decisions(cand, design, u, nozzle, pipe.inner_diameter, out,
+        return _geometry_decisions(cand, design, u, nozzle, span, out,
                                    passed=True, immersion_short=True)
     if not tried:
         out.append(Decision("geometry", "f.A", "—", None, _bi(
@@ -435,13 +448,37 @@ def _choose_geometry(rec: TagRecord, inp: CalcInput, library: Library,
     tried.sort(key=lambda x: (x[0], x[1], x[2]))  # estado, mejor margen, U más largo
     rank, _, neg_u, did, cand = tried[0]
     return _geometry_decisions(cand, next(d for d in TYPICAL_DESIGNS if d.id == did), -neg_u,
-                               nozzle, pipe.inner_diameter, out, passed=rank <= 1)
+                               nozzle, span, out, passed=rank <= 1)
+
+
+def _immersion_span(pipe: PipeData) -> float:
+    """Recorrido disponible para la punta medido sobre el eje del termopozo, m.
+
+    En cañería es el diámetro interno; inclinado, el diámetro dividido por el seno del
+    ángulo. En recipiente es tres veces la inmersión buscada, para que la regla de 1/3 del
+    recorrido dé esa inmersión y no un largo excesivo.
+    """
+    span = pipe.tip_limit / pipe.radial_factor
+    if pipe.is_vessel:
+        span = 3.0 * _vessel_target(pipe)
+    return span
+
+
+def _vessel_target(pipe: PipeData) -> float:
+    """Inmersión buscada en recipiente: la habitual, sin pasar del 80 % del líquido útil."""
+    return min(VESSEL_MIN_IMMERSION, 0.8 * pipe.tip_limit / pipe.radial_factor)
 
 
 def _immersion_ok(cand: CalcInput) -> bool:
     """La parte sensible queda bien inmersa y la punta lejos de la pared opuesta."""
     keys = {a.key for a in advise(cand)}
-    return not keys & {"adv.immersion_short", "adv.tip_hits_wall"}
+    if keys & {"adv.immersion_short", "adv.tip_hits_wall"}:
+        return False
+    pipe = cand.pipe
+    if pipe.is_vessel:
+        exposed = (cand.thermowell.geometry.U or 0.0) - pipe.nozzle_length
+        return exposed >= _vessel_target(pipe) - 1e-6
+    return True
 
 
 def _geometry_decisions(cand: CalcInput, design: TypicalDesign, u: float, nozzle: float,
@@ -463,16 +500,28 @@ def _geometry_decisions(cand: CalcInput, design: TypicalDesign, u: float, nozzle
                 "sin altura de montaje declarada (Hs = 0)")
     mount_en = (f"with Hs + wall = {_mm(nozzle)}" if nozzle > 0 else
                 "with no mounting height declared (Hs = 0)")
-    out.append(Decision("geometry", "f.U", u, QuantityKind.LENGTH, _bi(
-        f"{kind_es}: la punta queda {_mm(immersion)} dentro del flujo "
-        f"({immersion / pipe_id:.0%} del diámetro interno), {mount_es}. "
-        "Se busca al menos 1/3 del diámetro (o 100 mm) y la inmersión recomendada de la parte "
-        "sensible, sin acercarse a la pared opuesta; si no cumple ASME se prueban largos más "
-        "cortos.",
-        f"{kind_en}: the tip sits {_mm(immersion)} inside the flow ({immersion / pipe_id:.0%}"
-        f" of the inside diameter), {mount_en}. At least 1/3 of the diameter"
-        " (or 100 mm) and the recommended immersion of the sensitive part are sought without "
-        "approaching the opposite wall; if ASME fails, shorter lengths are tried.")))
+    if cand.pipe.is_vessel:
+        reason = _bi(
+            f"{kind_es}: la punta queda {_mm(immersion)} dentro del recipiente, {mount_es}. "
+            f"En recipientes se busca la inmersión habitual de {_mm(VESSEL_MIN_IMMERSION)} "
+            "(acotada por la profundidad útil del líquido) y la recomendada de la parte "
+            "sensible; si no cumple ASME se prueban largos más cortos.",
+            f"{kind_en}: the tip sits {_mm(immersion)} inside the vessel, {mount_en}. In "
+            f"vessels the usual immersion of {_mm(VESSEL_MIN_IMMERSION)} (limited by the "
+            "usable liquid depth) and the recommended immersion of the sensitive part are "
+            "sought; if ASME fails, shorter lengths are tried.")
+    else:
+        reason = _bi(
+            f"{kind_es}: la punta queda {_mm(immersion)} dentro del flujo "
+            f"({immersion / pipe_id:.0%} del recorrido disponible), {mount_es}. "
+            "Se busca al menos 1/3 del diámetro (o 100 mm) y la inmersión recomendada de la "
+            "parte sensible, sin acercarse a la pared opuesta; si no cumple ASME se prueban "
+            "largos más cortos.",
+            f"{kind_en}: the tip sits {_mm(immersion)} inside the flow ({immersion / pipe_id:.0%}"
+            f" of the available travel), {mount_en}. At least 1/3 of the diameter"
+            " (or 100 mm) and the recommended immersion of the sensitive part are sought "
+            "without approaching the opposite wall; if ASME fails, shorter lengths are tried.")
+    out.append(Decision("geometry", "f.U", u, QuantityKind.LENGTH, reason))
     if immersion_short:
         out.append(Decision("geometry", "f.U", "—", None, _bi(
             "Ningún largo que cumpla ASME deja la parte sensible con la inmersión recomendada "

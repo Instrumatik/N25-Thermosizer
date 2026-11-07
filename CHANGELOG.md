@@ -1,5 +1,31 @@
 # Cambios
 
+## 1.4.0 (2026-11-07)
+
+Revisión del usuario sobre la versión 1.3.0 (montaje y conexión según la hoja de datos del
+cliente, guías de la biblioteca).
+
+- **Montaje en recipiente**: opción **Recipiente / Vessel** en el NPS y orientación «En
+  recipiente». Oculta schedule y OD, pide diámetro interno del recipiente, pared, Hs y
+  **profundidad útil de líquido**, y deja un caso con velocidad 0 (frecuencia de estela no
+  aplica; se verifican presión, temperatura y esfuerzo estático). Nota en la memoria, aviso
+  si la inmersión es menor a 450 mm (tabla de instalación de la biblioteca) y, en
+  automático, tamaño de conexión de recipiente e inmersión buscada de 450 mm acotada al
+  80 % del líquido útil.
+- **Ángulo de montaje** para la orientación inclinada: la profundidad de la punta se
+  proyecta con sen(ángulo) para el aviso de pared opuesta y el U automático; la hoja de
+  datos muestra «Inclinado 45°». Aviso si falta el ángulo.
+- **Rosca NPT o G (BSPP, ISO 228)** en conexiones roscadas: tamaños «1 NPT» o «G 1», aviso
+  informativo para G, rótulo en el plano y en la hoja de datos.
+- **Código de hoja de datos** de la conexión: H bridado, S soldado / socket weld, R roscado
+  NPT, G roscado G; visible en el editor y en la hoja de datos («tipo H»).
+- **Biblioteca**: fichas «Conexión: …» para roscado, bridado, socket weld, soldado, Van
+  Stone y sanitario con la tabla «dónde se usa / dónde no conviene», y fichas «Perfil: …»
+  para recto, cónico y escalonado con cuándo conviene, limitaciones, costo relativo
+  (recto 1,0; escalonado 1,05 a 1,15; cónico 1,10 a 1,25), por qué, nota de costos y qué
+  verifica TS en automático. Las tablas también están en las fichas «Tipo de conexión» y
+  «Perfil del vástago», en **Referencias** y en la búsqueda Ctrl+K (español e inglés).
+
 ## 1.3.0 (2026-11-06)
 
 Revisión del usuario sobre la versión 1.2.0.

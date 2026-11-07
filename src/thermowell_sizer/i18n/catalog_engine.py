@@ -72,6 +72,11 @@ ENGINE_ES: Final[dict[str, str]] = {
         "(conservador)."
     ),
     "note.angled": "Montaje inclinado: se evalúa como perpendicular (conservador).",
+    "note.vessel": (
+        "Montaje en recipiente: sin flujo (velocidad 0) no hay desprendimiento de vórtices y "
+        "la verificación de frecuencia no aplica; se verifican presión, temperatura del "
+        "material y esfuerzo estático. Si hay agitación, cargue un caso con su velocidad."
+    ),
     "note.sanitary_compliance": (
         "Conexión sanitaria: la norma no cubre su flexibilidad; se usa H_c de conexión "
         "roscada como aproximación."
@@ -211,6 +216,11 @@ ENGINE_EN: Final[dict[str, str]] = {
         "Elbow mounting, tip upstream: evaluated as perpendicular (conservative)."
     ),
     "note.angled": "Angled mounting: evaluated as perpendicular (conservative).",
+    "note.vessel": (
+        "Vessel mounting: with no flow (velocity 0) there is no vortex shedding and the "
+        "frequency check does not apply; pressure, material temperature and steady stress "
+        "are checked. If there is agitation, enter a case with its velocity."
+    ),
     "note.sanitary_compliance": (
         "Sanitary connection: its compliance is not covered; the threaded H_c is used."
     ),

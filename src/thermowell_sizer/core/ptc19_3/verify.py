@@ -320,6 +320,8 @@ def _general_checks(
         notes.append("note.elbow_upstream")
     elif orientation is MountingOrientation.ANGLED:
         notes.append("note.angled")
+    elif orientation is MountingOrientation.VESSEL:
+        notes.append("note.vessel")
     if inp.thermowell.connection.type is ConnectionType.SANITARY:
         notes.append("note.sanitary_compliance")
     if process.operating_temperature > k.HIGH_TEMPERATURE_FE_WARNING:
