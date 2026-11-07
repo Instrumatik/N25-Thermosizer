@@ -1,5 +1,26 @@
 # Cambios
 
+## 1.5.0 (2026-11-07)
+
+Revisión del usuario sobre la versión 1.4.0: la Biblioteca de ayuda tiene que bastar para
+entender cada término sin buscar fuera del programa.
+
+- **Fichas en profundidad**: las 150 fichas «ⓘ» suman cuatro secciones nuevas, en español
+  e inglés: **En esencia: qué pasa y por qué** (el mecanismo físico, químico o molecular),
+  **Por qué importa**, **Ejemplo numérico** paso a paso y **Errores comunes**. Se
+  reforzaron también los límites, la interpretación y las acciones donde hacía falta.
+- **Glosario completo**: 20 fichas nuevas (lock-in, caudal estándar, collar de soporte,
+  constante de tiempo, error de inmersión, concentración de esfuerzos, factor de
+  magnificación, límite de fatiga, masa añadida, PMI, plano de soporte, prueba
+  hidrostática, Pt100, termopar, resonancias en línea y transversal, skin point,
+  termovaina, bimetálico y vaina cerámica). Cada término del glosario abre su ficha
+  completa debajo de la definición.
+- **Normas**: 8 fichas nuevas (PTC 19.3 TW, B16.5, B40.200, DIN 43772, ISA-TR20, NACE
+  MR0175, IEC 60751 e IEC 60584) con qué cubren, para qué se usan en TS, ejemplo y errores.
+  Solo resúmenes y números de párrafo, sin texto de las normas.
+- Las fichas nuevas aparecen en la búsqueda Ctrl+K. Las listas y párrafos de las fichas se
+  muestran con formato.
+
 ## 1.4.0 (2026-11-07)
 
 Revisión del usuario sobre la versión 1.3.0 (montaje y conexión según la hoja de datos del

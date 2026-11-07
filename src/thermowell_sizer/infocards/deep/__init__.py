@@ -22,9 +22,15 @@ from thermowell_sizer.infocards.deep import (
     d_results,
     d_standards,
     d_well,
+    e_conn,
+    e_criteria,
+    e_glossary,
+    e_misc,
+    e_well,
 )
 
-_MODULES = (d_process, d_pipe, d_well, d_results, d_criteria, d_misc, d_glossary, d_standards)
+_MODULES = (d_process, d_pipe, d_well, d_results, d_criteria, d_misc, d_glossary, d_standards,
+            e_well, e_criteria, e_glossary, e_conn, e_misc)
 
 GLOSSARY_CARD: dict[str, str] = {
     "bore": "f.d", "damping": "opt.damping", "lock_in": "g.lock_in",

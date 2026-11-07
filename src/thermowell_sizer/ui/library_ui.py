@@ -41,7 +41,8 @@ from thermowell_sizer.data.selection import (
 )
 from thermowell_sizer.i18n import Language, tr
 from thermowell_sizer.infocards.content import CARDS
-from thermowell_sizer.infocards.render import search_text
+from thermowell_sizer.infocards.deep import GLOSSARY_CARD, STANDARD_CARD
+from thermowell_sizer.infocards.render import render_card, search_text
 from thermowell_sizer.ui.state import STATE
 from thermowell_sizer.ui.text import t
 from thermowell_sizer.ui.widgets import QuantityEdit, fmt, fmt_quantity
@@ -259,8 +260,9 @@ class LibraryWindow(QWidget):
                 other = g.term_en if _es() else g.term_es
                 body = g.definition_es if _es() else g.definition_en
                 formula = f"<p><code>{g.formula}</code></p>" if g.formula else ""
-                self.gl_view.setHtml(f"<h3>{g.term_es if _es() else g.term_en}</h3>"
-                                     f"<p><i>{other}</i></p><p>{body}</p>{formula}")
+                head = (f"<h3>{g.term_es if _es() else g.term_en}</h3>"
+                        f"<p><i>{other}</i></p><p>{body}</p>{formula}")
+                self.gl_view.setHtml(head + _card_html(GLOSSARY_CARD.get(g.id)))
 
         self.gl_list.currentRowChanged.connect(show)
         split.addWidget(self.gl_list)
@@ -302,13 +304,27 @@ class LibraryWindow(QWidget):
             if 0 <= row < len(stds):
                 s = stds[row]
                 self.std_view.setHtml(f"<h3>{s[1]}</h3><p>{t('lib.edition')}: {s[2]}</p>"
-                                      f"<p>{s[3] if _es() else s[4]}</p>")
+                                      f"<p>{s[3] if _es() else s[4]}</p>"
+                                      + _card_html(STANDARD_CARD.get(s[0])))
 
         self.std_list.currentRowChanged.connect(show)
         split.addWidget(self.std_list)
         split.addWidget(self.std_view)
         split.setSizes([300, 660])
         return split
+
+
+def _card_qfmt(value: float, kind: QuantityKind) -> str:
+    return fmt_quantity(value, kind)
+
+
+def _card_html(card_id: str | None) -> str:
+    """Ficha completa (esencia, ejemplo, errores…) bajo la definición breve, o vacío."""
+    card = CARDS.get(card_id or "")
+    if card is None:
+        return ""
+    return "<hr>" + render_card(card, None, None, es=_es(), qfmt=_card_qfmt,
+                                images=False).html
 
 
 def reference_html(table: RefTable, es: bool) -> str:
