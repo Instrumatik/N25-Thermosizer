@@ -10,7 +10,7 @@ listados del proyecto.
 
 ## 1. Instalación
 
-1. Ejecute `ThermoWellSizer-1.3.0-setup.exe`. Puede instalar solo para su usuario (no
+1. Ejecute `ThermoWellSizer-1.5.0-setup.exe`. Puede instalar solo para su usuario (no
    pide permisos de administrador) o para todos los usuarios del equipo.
 2. Opcionalmente, cree el acceso directo en el escritorio y asocie los archivos `.tws`
    para abrir los proyectos con doble clic.
@@ -72,7 +72,14 @@ de cada reporte muestra «Licenciado a …».
       solas (CoolProp o tablas de la biblioteca); desmarque la casilla para cargarlas a
       mano.
    3. *Tubería*: NPS (1/8" a 48") y schedule (todos los de ASME B36.10M y B36.19M,
-      ordenados por espesor); con **Otro** se cargan OD y espesor a mano. Orientación,
+      ordenados por espesor); con **Otro** se cargan OD y espesor a mano. Con
+      **Recipiente / Vessel** (montaje en recipiente o tanque, sin flujo) se ocultan
+      schedule y OD y se cargan el diámetro interno del recipiente, el espesor de pared y
+      la **profundidad útil de líquido**; la orientación pasa a «En recipiente» y queda un
+      caso con velocidad 0 (la frecuencia de estela no aplica y se verifican presión,
+      temperatura y esfuerzo estático; si hay agitador, agregue un caso con la velocidad
+      estimada). La inmersión buscada es de 450 mm, sin pasar del 80 % del líquido útil.
+      Orientación (perpendicular, **inclinado con su ángulo**, en codo o en recipiente),
       **Hs, altura de la brida de montaje** medida desde la superficie externa de la
       tubería hasta la cara de la brida (el programa suma el espesor de pared y muestra
       el desglose Hs + pared + inmersión = U) y, opcionalmente, el diámetro interno de la
@@ -80,7 +87,8 @@ de cada reporte muestra «Licenciado a …».
    4. *Termopozo*: perfil (recto, cónico, escalonado), dimensiones L, A, B, d, t, b, U,
       material, conexión a proceso (el **tamaño** se elige de una lista según el tipo,
       con el sugerido para el NPS de la línea; clase y cara solo para bridadas y Van
-      Stone), recubrimiento y, si hace falta, **E y S cargados a mano** para ese tag. El botón **Diseño típico /
+      Stone; para roscadas, **rosca NPT o G (BSPP, ISO 228)**; debajo se muestra el código
+      de hoja de datos H bridado, S soldado, R roscado NPT o G roscado G), recubrimiento y, si hace falta, **E y S cargados a mano** para ese tag. El botón **Diseño típico /
       especificación…** completa las cotas solo (ver sección 4.1).
    5. *Sensor*: tipo (RTD o termopar) y diámetro de vaina.
 3. El cálculo corre solo medio segundo después de cada cambio; **F5** lo fuerza y
@@ -191,11 +199,19 @@ ingeniero calificado.
 ## 6. Biblioteca
 
 El menú **Biblioteca** abre materiales, fluidos, bridas y tuberías, glosario, fichas de
-normas y **Referencias**: tipos de termopozo y cuándo usar cada uno, diseños típicos,
+normas y **Referencias**: tipos de termopozo y cuándo usar cada uno, **tipos de conexión
+(dónde se usan y dónde no conviene)**, **perfiles del vástago (uso, límites y costo
+relativo: recto 1,0; escalonado 1,05 a 1,15; cónico 1,10 a 1,25)**, diseños típicos,
 buenas prácticas de instalación, guía de materiales por servicio, códigos de color de
 termopares (ANSI e IEC), tolerancias de termopares, clases y cableado de Pt100 y escalas
 de termómetros bimetálicos. **Ctrl+K** busca en toda la biblioteca, sin distinguir acentos y tolerando
-errores de tipeo.
+errores de tipeo. Las fichas «Conexión: …» y «Perfil: …» (y las de los campos «Tipo de
+conexión» y «Perfil del vástago») muestran esas tablas con la opción resaltada.
+
+Cada ficha «ⓘ» explica el término a fondo: **qué es**, **en esencia qué pasa y por qué**
+(el mecanismo físico o químico), **por qué importa**, **límites**, **cómo interpretarlo**,
+**qué hacer**, un **ejemplo numérico** y los **errores comunes**. Las pestañas **Glosario**
+y **Normas** muestran la ficha completa debajo de la definición breve.
 
 - **Asistente de material**: a partir de las condiciones del servicio (temperatura,
   cloruros, H₂S, agentes químicos, erosión) ordena los materiales en recomendados,

@@ -179,6 +179,18 @@ UI: Final[dict[str, tuple[str, str]]] = {
     "f.pipe_id": ("Diámetro interno", "Inner diameter"),
     "f.pipe_custom": ("Diámetro interno manual", "Manual inner diameter"),
     "f.orientation": ("Orientación", "Orientation"),
+    "f.mount_angle": ("Ángulo de montaje (termopozo / eje de la tubería)",
+                      "Mounting angle (thermowell / pipe axis)"),
+    "f.liquid_depth": ("Profundidad útil del líquido (opcional)",
+                       "Usable liquid depth (optional)"),
+    "f.vessel_hint": ("Recipiente: cargue el diámetro interno del recipiente, el espesor de "
+                      "pared y Hs de la tobera. Sin flujo se usa velocidad 0; si hay "
+                      "agitación, agregue un caso con su velocidad.",
+                      "Vessel: enter the vessel inside diameter, the wall thickness and the "
+                      "nozzle Hs. With no flow velocity 0 is used; if there is agitation, add "
+                      "a case with its velocity."),
+    "f.thread": ("Rosca", "Thread"),
+    "f.conn_code": ("Código de hoja de datos: tipo {code}", "Data sheet code: type {code}"),
     "f.insulation": ("Espesor de aislamiento", "Insulation thickness"),
     "f.nozzle": ("Altura de la brida de montaje", "Mounting flange height"),
     "f.mount": ("Hs, altura de la brida de montaje (cara externa del caño → cara de la brida)",
@@ -484,6 +496,9 @@ ENUM_TEXT: Final[dict[str, tuple[str, str]]] = {
     "socket_weld": ("Socket weld", "Socket weld"), "weld_in": ("Soldado", "Weld-in"),
     "van_stone": ("Van Stone", "Van Stone"), "sanitary": ("Sanitario", "Sanitary"),
     "perpendicular": ("Perpendicular", "Perpendicular"), "angled": ("Inclinado", "Angled"),
+    "vessel": ("En recipiente", "In vessel"),
+    "npt": ("NPT (cónica, ASME B1.20.1)", "NPT (taper, ASME B1.20.1)"),
+    "g": ("G / BSPP (paralela, ISO 228-1)", "G / BSPP (parallel, ISO 228-1)"),
     "elbow_tip_upstream": ("En codo, punta aguas arriba", "Elbow, tip upstream"),
     "elbow_tip_downstream": ("En codo, punta aguas abajo", "Elbow, tip downstream"),
     "rtd_pt100": ("RTD Pt100", "RTD Pt100"), "rtd_pt1000": ("RTD Pt1000", "RTD Pt1000"),

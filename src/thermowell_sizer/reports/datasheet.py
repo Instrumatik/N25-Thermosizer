@@ -126,10 +126,14 @@ def sections(rep: TagReport) -> list[tuple[str, list[Row]]]:
             (f.t("case"), cases),
         ]),
         (f.t("sec.pipe"), [
-            (f.t("pipe_size"), f"NPS {pipe.nominal_size} / Sch {pipe.schedule}"
-             if pipe.nominal_size else "—"),
-            (f.t("pipe_id"), f.q(pipe.inner_diameter, QuantityKind.DIAMETER)),
-            (f.t("orientation"), _enum(rep, pipe.orientation.value)),
+            (f.t("pipe_size"), f.t("vessel") if pipe.is_vessel else
+             f"NPS {pipe.nominal_size} / Sch {pipe.schedule}" if pipe.nominal_size else "—"),
+            (f.t("vessel_id") if pipe.is_vessel else f.t("pipe_id"),
+             f.q(pipe.inner_diameter, QuantityKind.DIAMETER)),
+            *([(f.t("liquid_depth"), f.q(pipe.liquid_depth, QuantityKind.LENGTH))]
+              if pipe.is_vessel and pipe.liquid_depth else []),
+            (f.t("orientation"), _enum(rep, pipe.orientation.value)
+             + (f" {pipe.mount_angle:.0f}°" if pipe.mount_angle else "")),
             (f.t("wall"), f.q(pipe.wall_thickness, QuantityKind.LENGTH)),
             (f.t("nozzle"), f.q(hs, QuantityKind.LENGTH)),
         ]),
@@ -137,7 +141,10 @@ def sections(rep: TagReport) -> list[tuple[str, list[Row]]]:
             (f.t("construction"), f.t("bar_stock")),
             (f.t("profile"), _enum(rep, g.profile.value)),
             (f.t("material"), mat_name), (f.t("coating"), coating),
-            (f.t("connection"), f"{_enum(rep, conn.type.value)} {conn.size}".strip()),
+            (f.t("connection"), " ".join(x for x in (
+                _enum(rep, conn.type.value), conn.size,
+                f"({f.t('conn_type_code', code=conn.datasheet_code)})"
+                if conn.datasheet_code else "") if x)),
             (f.t("rating"), rating),
             (f.t("U"), f.q(g.U, QuantityKind.LENGTH)),
             (f.t("u_breakdown"), f.t("u_breakdown_value", hs=f.q(hs, QuantityKind.LENGTH),

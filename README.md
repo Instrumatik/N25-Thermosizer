@@ -9,7 +9,7 @@ memoria de cálculo trazable.
 
 ## Estado
 
-Versión 1.3.0: las 7 fases del plan, las mejoras de la fase 8 y las revisiones 1.2 y 1.3 están completas ([cambios](CHANGELOG.md)).
+Versión 1.5.0: las 7 fases del plan, las mejoras de la fase 8 y las revisiones 1.2 a 1.5 están completas ([cambios](CHANGELOG.md)).
 
 | Documento | Contenido |
 |---|---|

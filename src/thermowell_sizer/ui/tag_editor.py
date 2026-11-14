@@ -9,6 +9,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
+    QDoubleSpinBox,
     QFormLayout,
     QGridLayout,
     QGroupBox,
@@ -23,6 +24,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from thermowell_sizer.autodesign import VESSEL_SIZE_NPS
 from thermowell_sizer.core.designs import (
     CONNECTION_SIZES,
     DesignChoice,
@@ -35,9 +37,11 @@ from thermowell_sizer.core.models import (
     FlowBasis,
     MountingOrientation,
     Phase,
+    ProcessConnection,
     PropertySource,
     SensorType,
     ShankProfile,
+    ThreadType,
 )
 from thermowell_sizer.core.units import QuantityKind
 from thermowell_sizer.core.validation import Severity, validate_geometry
@@ -61,6 +65,9 @@ STEP_KEYS = ("step.identification", "step.process", "step.pipe", "step.thermowel
              "step.sensor")
 MAX_FLOW_CASES = 6
 CUSTOM_PIPE = "Otro / Other"
+VESSEL_PIPE = "Recipiente / Vessel"
+VESSEL_NPS = "Recipiente"
+"""NPS guardado para un montaje en recipiente."""
 
 
 class FlowCaseRow(QWidget):
@@ -334,7 +341,7 @@ class TagEditor(QWidget):
         f.addRow(t("f.mode_pipe"), self._mode_combo("pipe", t("mode.auto_pipe")))
         self.mode_combos["pipe"].setCurrentIndex(1)
         self.c_nps = QComboBox()
-        self.c_nps.addItems([*self.library.pipe_sizes(), CUSTOM_PIPE])
+        self.c_nps.addItems([*self.library.pipe_sizes(), VESSEL_PIPE, CUSTOM_PIPE])
         self.c_sch = QComboBox()
         self.c_nps.currentIndexChanged.connect(self._nps_changed)
         self.c_sch.currentIndexChanged.connect(self._pipe_changed)
@@ -344,11 +351,25 @@ class TagEditor(QWidget):
                                           optional=True))
         f.addRow(t("f.wall"), self._q("wall", QuantityKind.LENGTH, minimum=0.0, optional=True))
         f.addRow(t("f.pipe_id"), self._q("pipe_id", QuantityKind.DIAMETER, minimum=1e-4))
+        self.l_vessel = QLabel(t("f.vessel_hint"))
+        self.l_vessel.setWordWrap(True)
+        self.l_vessel.setObjectName("hintLabel")
+        f.addRow("", self.l_vessel)
+        f.addRow(t("f.liquid_depth"), self._q("liquid_depth", QuantityKind.LENGTH,
+                                               minimum=1e-3, optional=True))
         self.quantities["pipe_od"].changed.connect(self._custom_pipe_changed)
         self.quantities["wall"].changed.connect(self._custom_pipe_changed)
         self.c_orient = EnumCombo(list(MountingOrientation))
-        self.c_orient.currentIndexChanged.connect(self._emit)
+        self.c_orient.currentIndexChanged.connect(self._orientation_changed)
         f.addRow(t("f.orientation"), self.c_orient)
+        self.s_angle = QDoubleSpinBox()
+        self.s_angle.setRange(5.0, 90.0)
+        self.s_angle.setDecimals(0)
+        self.s_angle.setSingleStep(5.0)
+        self.s_angle.setSuffix(" °")
+        self.s_angle.setValue(45.0)
+        self.s_angle.valueChanged.connect(self._emit)
+        f.addRow(t("f.mount_angle"), self.s_angle)
         f.addRow(t("f.insulation"), self._q("insulation", QuantityKind.LENGTH, minimum=0.0))
         f.addRow(t("f.mount"), self._q("mount", QuantityKind.LENGTH, minimum=0.0))
         self.l_mount = QLabel()
@@ -378,11 +399,11 @@ class TagEditor(QWidget):
         if block == "pipe":
             if not hasattr(self, "c_nps"):  # aún construyendo la página
                 return
-            custom = self.c_nps.currentText() == CUSTOM_PIPE
+            custom = self.c_nps.currentText() in (CUSTOM_PIPE, VESSEL_PIPE)
             if auto and custom:
                 self.c_nps.setCurrentIndex(max(self.c_nps.findText("6"), 0))
             elif not auto and not custom:
-                self.c_nps.setCurrentIndex(self.c_nps.count() - 1)
+                self.c_nps.setCurrentIndex(self.c_nps.findText(CUSTOM_PIPE))
             return
         self._emit()
 
@@ -415,6 +436,8 @@ class TagEditor(QWidget):
         self.c_rating.currentIndexChanged.connect(self._emit)
         self.c_face = EnumCombo(list(FlangeFace))
         self.c_face.currentIndexChanged.connect(self._emit)
+        self.c_thread = EnumCombo(list(ThreadType))
+        self.c_thread.currentIndexChanged.connect(self._thread_changed)
         self.c_material = QComboBox()
         for m in self.library.materials():
             self.c_material.addItem(f"{m.name} ({m.spec})", m.id)
@@ -429,8 +452,12 @@ class TagEditor(QWidget):
         self.l_size_hint = QLabel()
         self.l_size_hint.setObjectName("hintLabel")
         fc.addRow("", self.l_size_hint)
+        fc.addRow(t("f.thread"), self.c_thread)
         fc.addRow(t("f.rating"), self.c_rating)
         fc.addRow(t("f.face"), self.c_face)
+        self.l_conn_code = QLabel()
+        self.l_conn_code.setObjectName("hintLabel")
+        fc.addRow("", self.l_conn_code)
         fm.addRow(t("f.material"), self.c_material)
         fm.addRow(t("f.coating"), self.c_coating)
         fm.addRow(t("f.E_manual"), self._q("mat_E", QuantityKind.ELASTIC_MODULUS, minimum=1e9,
@@ -555,10 +582,58 @@ class TagEditor(QWidget):
             self._fill_sizes(conn, self._suggested_size(conn) or "")
         self._emit()
 
+    def _update_conn_code(self) -> None:
+        """Código de hoja de datos de la conexión elegida (H, S, R o G)."""
+        conn = ConnectionType(self.c_conn.value())
+        code = ProcessConnection(
+            type=conn, rating_class=300,
+            thread=ThreadType(self.c_thread.value()) if conn is ConnectionType.THREADED
+            else None).datasheet_code
+        self.l_conn_code.setText(t("f.conn_code", code=code) if code else "")
+
+    def _thread_changed(self) -> None:
+        """Cambia la designación del tamaño (NPT ↔ G) conservando la medida."""
+        if not self._loading and ConnectionType(self.c_conn.value()) is ConnectionType.THREADED:
+            size = self.e_conn_size.currentText().strip()
+            if ThreadType(self.c_thread.value()) is ThreadType.G:
+                size = "G " + size.replace(" NPT", "").replace("G ", "")
+            else:
+                size = size.replace("G ", "").replace(" NPT", "") + " NPT"
+            self._fill_sizes(ConnectionType.THREADED, size.strip())
+        self._emit()
+
+    def _orientation_changed(self) -> None:
+        """«En recipiente» en la orientación equivale a elegir «Recipiente» en el NPS."""
+        vessel = MountingOrientation(self.c_orient.value()) is MountingOrientation.VESSEL
+        if not self._loading and vessel != (self.c_nps.currentText() == VESSEL_PIPE):
+            if vessel:
+                self.c_nps.setCurrentIndex(self.c_nps.findText(VESSEL_PIPE))
+            else:
+                self.c_nps.setCurrentIndex(max(self.c_nps.findText("6"), 0))
+        self._emit()
+
+    def _set_vessel(self, vessel: bool) -> None:
+        """Al pasar a recipiente: orientación «En recipiente» y un caso con velocidad 0."""
+        orient = MountingOrientation(self.c_orient.value())
+        if vessel and orient is not MountingOrientation.VESSEL:
+            self.c_orient.set_value(MountingOrientation.VESSEL)
+            for row in list(self.flow_rows):
+                row.setParent(None)
+            self.flow_rows.clear()
+            self._add_case(emit=False).load({"label": "normal",
+                                             "basis": FlowBasis.VELOCITY.value,
+                                             "velocity": 0.0})
+            if not self.quantities["pipe_id"].value():
+                self.quantities["pipe_id"].set_value(2.0)
+        elif not vessel and orient is MountingOrientation.VESSEL:
+            self.c_orient.set_value(MountingOrientation.PERPENDICULAR)
+
     def _suggested_size(self, conn: ConnectionType) -> str | None:
         nps = self.c_nps.currentText()
         if nps == CUSTOM_PIPE:
             return None
+        if nps == VESSEL_PIPE:
+            nps = VESSEL_SIZE_NPS
         return suggested_connection_size(conn, nps, STATE.data_folder)
 
     def _fill_sizes(self, conn: ConnectionType, current: str) -> None:
@@ -567,7 +642,10 @@ class TagEditor(QWidget):
         combo.blockSignals(True)
         combo.clear()
         suggested = self._suggested_size(conn)
-        combo.addItems(list(CONNECTION_SIZES[conn]))
+        sizes = list(CONNECTION_SIZES[conn])
+        if conn is ConnectionType.THREADED and ThreadType(self.c_thread.value()) is ThreadType.G:
+            sizes = ["G " + x.replace(" NPT", "") for x in sizes]
+        combo.addItems(sizes)
         idx = combo.findText(current)
         if idx < 0 and current:
             combo.addItem(current)
@@ -580,7 +658,9 @@ class TagEditor(QWidget):
         nps = self.c_nps.currentText()
         self.c_sch.blockSignals(True)
         self.c_sch.clear()
-        if nps != CUSTOM_PIPE:
+        if not self._loading:
+            self._set_vessel(nps == VESSEL_PIPE)
+        if nps not in (CUSTOM_PIPE, VESSEL_PIPE):
             self.c_sch.addItems(self.library.schedules(nps))
             idx = self.c_sch.findText("40")
             if idx < 0:
@@ -594,9 +674,9 @@ class TagEditor(QWidget):
         pipe_mode = self.mode_combos.get("pipe")
         if pipe_mode is not None:
             pipe_mode.blockSignals(True)
-            pipe_mode.setCurrentIndex(0 if nps == CUSTOM_PIPE else 1)
+            pipe_mode.setCurrentIndex(0 if nps in (CUSTOM_PIPE, VESSEL_PIPE) else 1)
             pipe_mode.blockSignals(False)
-        if nps != CUSTOM_PIPE and self.c_sch.currentText():
+        if nps not in (CUSTOM_PIPE, VESSEL_PIPE) and self.c_sch.currentText():
             pipe = self.library.pipe(nps, self.c_sch.currentText())
             self.quantities["pipe_id"].set_value(pipe.inner_diameter)
             self.quantities["pipe_od"].set_value(pipe.outer_diameter)
@@ -652,18 +732,26 @@ class TagEditor(QWidget):
                                                            ConnectionType.VAN_STONE)
         self.c_rating.setEnabled(flanged)
         self.c_face.setEnabled(flanged)
+        self.c_thread.setEnabled(ConnectionType(self.c_conn.value()) is ConnectionType.THREADED)
+        self._update_conn_code()
         self._apply_modes()
-        custom = self.c_nps.currentText() == CUSTOM_PIPE
+        vessel = self.c_nps.currentText() == VESSEL_PIPE
+        custom = self.c_nps.currentText() == CUSTOM_PIPE or vessel
         for block, auto in (("pipe", not custom), ("process", self.chk_auto.isChecked())):
             combo = self.mode_combos.get(block)
             if combo is not None and bool(combo.currentData()) != auto:
                 combo.blockSignals(True)
                 combo.setCurrentIndex(1 if auto else 0)
                 combo.blockSignals(False)
-        for key in ("pipe_id", "pipe_od", "wall"):
+        for key in ("pipe_id", "wall"):
             self.quantities[key].setEnabled(custom)
+        self.quantities["pipe_od"].setEnabled(custom and not vessel)
+        self.quantities["liquid_depth"].setEnabled(vessel)
+        self.l_vessel.setVisible(vessel)
+        orient = MountingOrientation(self.c_orient.value())
+        self.s_angle.setEnabled(orient is MountingOrientation.ANGLED)
         self._update_mount_label()
-        self.c_sch.setEnabled(self.c_nps.currentText() != CUSTOM_PIPE)
+        self.c_sch.setEnabled(not custom)
         self.btn_add_case.setEnabled(len(self.flow_rows) < MAX_FLOW_CASES)
         for row in self.flow_rows:
             row.btn_remove.setEnabled(len(self.flow_rows) > 1)
@@ -677,7 +765,8 @@ class TagEditor(QWidget):
         q = self.quantities
         return {
             "material": [self.c_material, self.c_coating, q["mat_E"], q["mat_S"], q["g_ca"]],
-            "connection": [self.c_conn, self.e_conn_size, self.c_rating, self.c_face],
+            "connection": [self.c_conn, self.e_conn_size, self.c_thread, self.c_rating,
+                           self.c_face],
             "geometry": [self.c_profile, self.btn_design,
                          *(q[f"g_{k}"] for k in ("L", "U", "A", "B", "d", "t", "b", "Ls", "bs",
                                                  "T_lag", "L0"))],
@@ -723,7 +812,7 @@ class TagEditor(QWidget):
         return DesignContext(
             pipe_id=self.quantities["pipe_id"].value(),
             nozzle_length=self.nozzle_to_inner_wall(),
-            nps="" if nps == CUSTOM_PIPE else nps,
+            nps="" if nps == CUSTOM_PIPE else (VESSEL_SIZE_NPS if nps == VESSEL_PIPE else nps),
             rating_class=self.c_rating.currentData(),
             elbow=orient in (MountingOrientation.ELBOW_TIP_UPSTREAM,
                              MountingOrientation.ELBOW_TIP_DOWNSTREAM),
@@ -794,13 +883,14 @@ class TagEditor(QWidget):
         self.e_ph.setText(fmt(corr.ph, 1) if corr.ph is not None else "")
         self.chk_nace.setChecked(corr.nace_service)
         self.chk_erosive.setChecked(corr.solids_or_erosive)
-        nps_idx = self.c_nps.findText(pipe.nominal_size)
+        nps_idx = (self.c_nps.findText(VESSEL_PIPE) if pipe.is_vessel
+                   else self.c_nps.findText(pipe.nominal_size))
         self.c_nps.blockSignals(True)
-        self.c_nps.setCurrentIndex(nps_idx if nps_idx >= 0 else self.c_nps.count() - 1)
+        self.c_nps.setCurrentIndex(nps_idx if nps_idx >= 0 else self.c_nps.findText(CUSTOM_PIPE))
         self.c_nps.blockSignals(False)
         self.c_sch.blockSignals(True)
         self.c_sch.clear()
-        if self.c_nps.currentText() != CUSTOM_PIPE:
+        if self.c_nps.currentText() not in (CUSTOM_PIPE, VESSEL_PIPE):
             self.c_sch.addItems(self.library.schedules(pipe.nominal_size))
             self.c_sch.setCurrentIndex(max(self.c_sch.findText(pipe.schedule), 0))
         self.c_sch.blockSignals(False)
@@ -814,12 +904,17 @@ class TagEditor(QWidget):
         q["wall"].set_value(wall)
         q["pipe_od"].set_value(pipe.inner_diameter + 2 * wall if wall is not None else None)
         self.c_orient.set_value(pipe.orientation)
+        self.s_angle.blockSignals(True)
+        self.s_angle.setValue(pipe.mount_angle or 45.0)
+        self.s_angle.blockSignals(False)
+        q["liquid_depth"].set_value(pipe.liquid_depth)
         q["insulation"].set_value(pipe.insulation_thickness)
         q["mount"].set_value(pipe.mount_height if pipe.mount_height is not None
                              else max(pipe.nozzle_length - (wall or 0.0), 0.0))
         q["nozzle_id"].set_value(pipe.nozzle_inner_diameter)
         self.c_profile.set_value(g.profile)
         self.c_conn.set_value(tw.connection.type)
+        self.c_thread.set_value(tw.connection.thread or ThreadType.NPT)
         self._fill_sizes(tw.connection.type, tw.connection.size)
         if tw.connection.rating_class:
             self.c_rating.setCurrentIndex(max(self.c_rating.findData(tw.connection.rating_class),
@@ -929,10 +1024,14 @@ class TagEditor(QWidget):
                 },
             },
             "pipe": {
-                "nominal_size": "" if nps == CUSTOM_PIPE else nps,
-                "schedule": "" if nps == CUSTOM_PIPE else self.c_sch.currentText(),
+                "nominal_size": ("" if nps == CUSTOM_PIPE else
+                                 VESSEL_NPS if nps == VESSEL_PIPE else nps),
+                "schedule": "" if nps in (CUSTOM_PIPE, VESSEL_PIPE) else self.c_sch.currentText(),
                 "inner_diameter": q["pipe_id"].value(),
                 "orientation": self.c_orient.value().value,
+                "mount_angle": (self.s_angle.value() if MountingOrientation(self.c_orient.value())
+                                is MountingOrientation.ANGLED else None),
+                "liquid_depth": q["liquid_depth"].value() if nps == VESSEL_PIPE else None,
                 "insulation_thickness": q["insulation"].value() or 0.0,
                 "wall_thickness": q["wall"].value(),
                 "mount_height": q["mount"].value() or 0.0,
@@ -958,6 +1057,8 @@ class TagEditor(QWidget):
                     "type": conn.value, "size": self.e_conn_size.currentText().strip(),
                     "rating_class": self.c_rating.currentData() if flanged else None,
                     "face": self.c_face.value().value if flanged else None,
+                    "thread": (self.c_thread.value().value if conn is ConnectionType.THREADED
+                               else None),
                 },
             },
             "sensor": {

@@ -86,6 +86,20 @@ ADVICE_ES: Final[dict[str, str]] = {
         "Conexión roscada en servicio inflamable, tóxico o de presión elevada: se recomienda "
         "conexión bridada o soldada."
     ),
+    "adv.angle_missing": (
+        "Montaje inclinado sin ángulo cargado: la posición de la punta se evalúa como "
+        "perpendicular. Indique el ángulo entre el termopozo y el eje de la tubería."
+    ),
+    "adv.vessel_immersion": (
+        "Recipiente: la punta entra {exposed} en el fluido, menos que la inmersión habitual "
+        "de {min}. En un fluido quieto la transferencia de calor es baja y puede haber "
+        "estratificación: alargue la inserción o verifique el error por conducción."
+    ),
+    "adv.thread_g": (
+        "Rosca G (ISO 228-1, BSPP, paralela): no sella en la rosca, sino con una junta o un "
+        "anillo en la cara de apoyo. Especifique la junta y confirme el rating con el "
+        "fabricante; en plantas con especificación ASME suele pedirse NPT."
+    ),
     "adv.hydro_test": (
         "Prueba hidráulica de referencia: {p} (1,5 × presión de diseño). Confirme la presión "
         "interna y externa con la especificación del proyecto."
@@ -228,6 +242,20 @@ ADVICE_EN: Final[dict[str, str]] = {
     "adv.threaded_service": (
         "Threaded connection in flammable, toxic or high-pressure service: a flanged or "
         "welded connection is recommended."
+    ),
+    "adv.angle_missing": (
+        "Angled mounting without an angle: the tip position is evaluated as perpendicular. "
+        "Enter the angle between the thermowell and the pipe axis."
+    ),
+    "adv.vessel_immersion": (
+        "Vessel: the tip goes {exposed} into the fluid, less than the usual immersion of "
+        "{min}. In a still fluid heat transfer is low and stratification may occur: lengthen "
+        "the insertion or check the conduction error."
+    ),
+    "adv.thread_g": (
+        "G thread (ISO 228-1, BSPP, parallel): it does not seal on the thread but with a "
+        "gasket or ring on the seating face. Specify the gasket and confirm the rating with "
+        "the manufacturer; plants with ASME specifications usually require NPT."
     ),
     "adv.hydro_test": (
         "Reference hydrostatic test: {p} (1.5 × design pressure). Confirm internal and "

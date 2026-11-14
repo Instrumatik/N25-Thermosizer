@@ -11,13 +11,29 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Final
 
+from thermowell_sizer.infocards.guides import (
+    CONNECTION_NOTE,
+    CONNECTION_ROWS,
+    CONNECTION_TABLE,
+    PROFILE_AUTO,
+    PROFILE_COST_NOTE,
+    PROFILE_ROWS,
+    PROFILE_TABLE,
+)
+
 Bi = tuple[str, str]
 _NO: Final[Bi] = ("", "")
 
-SECTIONS: Final = ("what", "role", "affects", "limits", "compare", "interpret", "actions",
-                   "reference", "units")
+SECTIONS: Final = ("what", "essence", "role", "why", "affects", "limits", "compare", "interpret",
+                   "actions", "worked", "mistakes", "reference", "units")
+DEEP_SECTIONS: Final = ("essence", "why", "worked", "mistakes")
+"""Secciones de profundidad que toda ficha debe tener (revisión 1.5)."""
 SECTION_TITLES: Final[dict[str, Bi]] = {
     "what": ("Qué es", "What it is"),
+    "essence": ("En esencia: qué pasa y por qué", "In essence: what happens and why"),
+    "why": ("Por qué importa", "Why it matters"),
+    "worked": ("Ejemplo numérico", "Numerical example"),
+    "mistakes": ("Errores comunes", "Common mistakes"),
     "role": ("Qué hace en el programa", "What it does in the program"),
     "affects": ("Resultados que afecta", "Results it affects"),
     "limits": ("Umbrales y límites", "Thresholds and limits"),
@@ -30,6 +46,7 @@ SECTION_TITLES: Final[dict[str, Bi]] = {
     "diagram": ("Diagrama", "Diagram"),
     "curves": ("Curvas con los datos del tag", "Curves with the tag data"),
     "example": ("Ejemplo resuelto", "Worked example"),
+    "table": ("Guía de selección", "Selection guide"),
 }
 
 
@@ -48,12 +65,23 @@ class Card:
     actions: Bi = _NO
     reference: Bi = _NO
     units: Bi = _NO
+    essence: Bi = _NO
+    """Mecanismo físico, químico o práctico detrás del término."""
+    why: Bi = _NO
+    worked: Bi = _NO
+    """Ejemplo numérico (o práctico) explicado paso a paso."""
+    mistakes: Bi = _NO
     formulas: tuple[str, ...] = ()
     diagram: str = ""
     """``tw:<cota>``, ``mount``, ``orientation`` o ``connection``."""
     curves: tuple[str, ...] = ()
     symbols: tuple[str, ...] = ()
     """Símbolos de la traza que se muestran en el ejemplo resuelto."""
+    table: tuple[tuple[Bi, ...], ...] = ()
+    """Tabla de guía: primera fila encabezados, cada celda (es, en)."""
+    highlight: int = 0
+    """Fila de la tabla resaltada (la opción de la ficha); 0 = ninguna."""
+    table_note: Bi = _NO
 
     def text(self, section: str, es: bool) -> str:
         """Texto de una sección en el idioma pedido."""
@@ -385,13 +413,22 @@ _c("f.pipe_id", ("Diámetro interno", "Inside diameter"),
             "V, Re, f_s, stresses, actual volume flow and insertion warnings."),
    formulas=(r"V = \frac{Q}{\pi D_i^2/4}",), symbols=("V",), units=_LEN)
 _c("f.orientation", ("Orientación", "Orientation"),
-   ("Cómo se instala el termopozo respecto del flujo: perpendicular, inclinado o en codo.",
-    "How the thermowell is installed relative to the flow: perpendicular, inclined or in an "
-    "elbow."),
+   ("Cómo se instala el termopozo: perpendicular a la tubería, inclinado (con su ángulo), en "
+    "codo o en recipiente (sin flujo).",
+    "How the thermowell is installed: perpendicular to the pipe, angled (with its angle), in "
+    "an elbow or in a vessel (no flow)."),
    ("En codo con la punta hacia el flujo, la carga transversal es menor; el programa lo informa "
     "y mantiene el cálculo conservador.", "In an elbow facing the flow the transverse load is "
     "lower; the program reports it and keeps the calculation conservative."),
    affects=("Avisos e inserción recomendada.", "Warnings and recommended insertion."),
+   interpret=("En recipiente la velocidad es 0: la frecuencia de estela no aplica y TS verifica "
+              "presión, temperatura y esfuerzo estático. No pide NPS ni schedule, solo Hs, "
+              "pared, diámetro y profundidad útil de líquido. Si hay agitador, agregue un caso "
+              "con la velocidad estimada del líquido.",
+              "In a vessel the velocity is 0: wake frequency does not apply and TS checks "
+              "pressure, temperature and steady stress. It asks for no NPS or schedule, only "
+              "Hs, wall, diameter and usable liquid depth. With an agitator, add a case with "
+              "the estimated liquid velocity."),
    diagram="orientation")
 _c("f.insulation", ("Espesor de aislación", "Insulation thickness"),
    ("Espesor del aislamiento térmico de la línea.", "Line thermal insulation thickness."),
@@ -439,7 +476,8 @@ _c("f.profile", ("Perfil del vástago", "Shank profile"),
             "f_n, f_n,c, all stresses and the scope criterion."),
    limits=("Rangos de aplicación de las tablas 4-1-1 (recto/cónico) y 4-2-1 (escalonado).",
            "Applicability ranges of tables 4-1-1 (straight/tapered) and 4-2-1 (stepped)."),
-   reference=_GEOM_REF, diagram="tw:A")
+   interpret=PROFILE_AUTO, reference=_GEOM_REF, diagram="tw:A", table=PROFILE_TABLE,
+   table_note=PROFILE_COST_NOTE)
 _c("f.connection", ("Tipo de conexión", "Connection type"),
    ("Cómo se fija el termopozo al proceso: roscada, bridada, para soldar, socket weld, Van Stone "
     "o sanitaria.", "How the thermowell attaches to the process: threaded, flanged, weld-in, "
@@ -454,7 +492,8 @@ _c("f.connection", ("Tipo de conexión", "Connection type"),
               "higher K_t; avoid them at high velocity."),
    reference=("ASME PTC 19.3 TW-2016, párr. 6-6 y 6-12.", "ASME PTC 19.3 TW-2016, paras. 6-6 "
                                                           "and 6-12."),
-   diagram="connection", symbols=("H_c", "K_t"))
+   diagram="connection", symbols=("H_c", "K_t"), table=CONNECTION_TABLE,
+   table_note=CONNECTION_NOTE)
 _c("f.conn_size", ("Tamaño de conexión", "Connection size"),
    ("Tamaño nominal de la rosca o brida del termopozo.", "Nominal size of the thermowell "
                                                          "thread or flange."),
@@ -1016,6 +1055,104 @@ for _k, (_title, _what) in _CRIT.items():
        formulas=base.formulas if base else (), curves=base.curves if base else (),
        symbols=base.symbols if base else ())
 
+# --- Guías por tipo de conexión y perfil (biblioteca) ---------------------------------------
+_CONN_WHAT: Final[dict[str, Bi]] = {
+    "threaded": ("Termopozo con rosca macho (NPT cónica o G cilíndrica ISO 228) que se enrosca "
+                 "en una cupla o niple de la línea.",
+                 "Thermowell with a male thread (tapered NPT or parallel G ISO 228) screwed into "
+                 "a coupling or nipple on the line."),
+    "flanged": ("Termopozo soldado o maquinado con una brida que se abulona a la brida de "
+                "montaje de la línea.",
+                "Thermowell welded or machined with a flange bolted to the line mounting "
+                "flange."),
+    "socket_weld": ("Termopozo que se inserta en un socket y se suelda con un filete exterior.",
+                    "Thermowell inserted into a socket and welded with an outside fillet."),
+    "weld_in": ("Termopozo soldado directamente a la tubería o a un sockolet, sin brida.",
+                "Thermowell welded directly to the pipe or to a sockolet, without a flange."),
+    "van_stone": ("Termopozo de una sola pieza con un collar solapado que queda apretado por una "
+                  "brida loca.",
+                  "One-piece thermowell with a lapped collar clamped by a loose flange."),
+    "sanitary": ("Termopozo con conexión tipo clamp (abrazadera y junta) y superficies pulidas.",
+                 "Thermowell with a clamp connection (clamp and gasket) and polished surfaces."),
+}
+for _key, _row in CONNECTION_ROWS.items():
+    _r = CONNECTION_TABLE[_row]
+    _c(f"conn.{_key}", (f"Conexión: {_r[0][0]}", f"Connection: {_r[0][1]}"), _CONN_WHAT[_key],
+       ("Define la rigidez del apoyo, el K_t de esfuerzos y si aplica rating de brida; la tabla "
+        "resume dónde conviene y dónde no.", "It defines support stiffness, the stress K_t and "
+        "whether a flange rating applies; the table summarizes where it fits and where not."),
+       limits=(_r[2][0], _r[2][1]), interpret=(_r[1][0], _r[1][1]),
+       table=CONNECTION_TABLE, highlight=_row, table_note=CONNECTION_NOTE, diagram="connection")
+
+_PROFILE_WHAT: Final[dict[str, Bi]] = {
+    "tapered": ("Vástago que se afina linealmente desde la raíz A hasta la punta B.",
+                "Shank that tapers linearly from the root A to the tip B."),
+    "stepped": ("Vástago con dos diámetros: A en la raíz y B en la punta, unidos por un escalón.",
+                "Shank with two diameters: A at the root and B at the tip, joined by a step."),
+    "straight": ("Vástago de diámetro constante (A = B).",
+                 "Constant-diameter shank (A = B)."),
+}
+for _key, _row in PROFILE_ROWS.items():
+    _r = PROFILE_TABLE[_row]
+    _c(f"profile.{_key}", (f"Perfil: {_r[0][0]}", f"Profile: {_r[0][1]}"), _PROFILE_WHAT[_key],
+       ("Elige las fórmulas de frecuencia natural, diámetro medio y factor G de esfuerzos.",
+        "Selects the natural frequency, mean diameter and stress G-factor formulas."),
+       interpret=(_r[1][0], _r[1][1]), limits=(_r[2][0], _r[2][1]),
+       compare=(f"Costo relativo {_r[3][0]} (recto = 1,0). {_r[4][0]}",
+                f"Relative cost {_r[3][1]} (straight = 1.0). {_r[4][1]}"),
+       actions=PROFILE_AUTO, reference=_GEOM_REF, table=PROFILE_TABLE, highlight=_row,
+       table_note=PROFILE_COST_NOTE, diagram="tw:A")
+
+# --- Montaje en recipiente, ángulo y rosca ----------------------------------------------------
+_c("f.mount_angle", ("Ángulo de montaje", "Mounting angle"),
+   ("Ángulo entre el termopozo y el eje de la tubería cuando el montaje es inclinado (90° = "
+    "perpendicular, 45° = típico a contraflujo).",
+    "Angle between the thermowell and the pipe axis for an angled mounting (90° = "
+    "perpendicular, 45° = typical against the flow)."),
+   ("Proyecta la parte expuesta sobre el radio de la tubería: la profundidad real es "
+    "inmersión × sen(ángulo). Con eso TS verifica que la punta no toque la pared opuesta y "
+    "elige U en automático.",
+    "Projects the exposed length onto the pipe radius: the actual depth is immersion × "
+    "sin(angle). TS uses it to check the tip does not touch the opposite wall and to choose "
+    "U in automatic mode."),
+   affects=("Aviso de posición de la punta, largo U automático y hoja de datos («Inclinado "
+            "45°»).", "Tip position warning, automatic U length and datasheet (\"Angled "
+            "45°\")."),
+   limits=("Entre 5° y 90°. El cálculo ASME se hace con la velocidad normal al vástago, que "
+           "es conservador.", "Between 5° and 90°. The ASME check uses the velocity normal "
+           "to the shank, which is conservative."))
+_c("f.liquid_depth", ("Profundidad útil de líquido", "Usable liquid depth"),
+   ("En un recipiente o tanque, profundidad mínima de líquido por debajo de la conexión que "
+    "el termopozo puede aprovechar (nivel mínimo de operación).",
+    "In a vessel or tank, minimum liquid depth below the connection that the thermowell can "
+    "use (minimum operating level)."),
+   ("Limita la posición de la punta junto con el diámetro del recipiente: TS toma el menor de "
+    "los dos como recorrido disponible.",
+    "Limits the tip position together with the vessel diameter: TS takes the smaller of the "
+    "two as the available travel."),
+   affects=("Aviso de posición de la punta y largo U automático.",
+            "Tip position warning and automatic U length."),
+   interpret=("Para medir bien, la punta debe quedar sumergida aun con nivel bajo; TS busca "
+              "una inmersión de al menos 450 mm en recipientes, como sugiere la tabla de "
+              "instalación de la biblioteca.",
+              "For a good reading the tip must stay submerged even at low level; TS looks for "
+              "an immersion of at least 450 mm in vessels, as the library installation table "
+              "suggests."), units=_LEN)
+_c("f.thread", ("Tipo de rosca", "Thread type"),
+   ("Rosca de la conexión roscada: NPT (cónica, ASME B1.20.1, sella en el filete) o G "
+    "(BSPP cilíndrica, ISO 228, sella con junta o arandela).",
+    "Thread of a threaded connection: NPT (tapered, ASME B1.20.1, seals on the thread) or G "
+    "(BSPP parallel, ISO 228, seals with a gasket or washer)."),
+   ("Cambia la designación del tamaño («1 NPT» o «G 1»), el código de la hoja de datos (R o G) "
+    "y el rótulo del plano. El cálculo ASME trata ambas como conexión roscada.",
+    "Changes the size designation (\"1 NPT\" or \"G 1\"), the datasheet code (R or G) "
+    "and the drawing label. The ASME check treats both as a threaded connection."),
+   affects=("Hoja de datos, plano y aviso informativo para rosca G.",
+            "Datasheet, drawing and informative warning for G threads."),
+   interpret=("La G necesita una cara de asiento y junta; verifique que la cupla de la línea "
+              "tenga la misma rosca.", "G needs a seating face and gasket; check that the "
+              "line coupling has the same thread."))
+
 ALIASES: Final[dict[str, str]] = {
     # columnas de la tabla por caso y filas de «Resultados calculados»
     "V": "r.velocity", "Re": "r.reynolds", "N_S": "r.strouhal", "f_s": "r.fs", "f_n": "r.fn",
@@ -1041,3 +1178,12 @@ def card_for(key: str) -> Card | None:
         if key.startswith(prefix):
             return CARDS[f"crit.{prefix}"]
     return CARDS.get(f"crit.{key}")
+
+
+def _apply_deep() -> None:
+    from thermowell_sizer.infocards.deep import apply  # importación diferida: evita el ciclo
+
+    apply(CARDS, Card)
+
+
+_apply_deep()

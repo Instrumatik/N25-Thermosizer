@@ -20,6 +20,7 @@ from thermowell_sizer.core.models import (
     MountingOrientation,
     Phase,
     SensorType,
+    ThreadType,
 )
 from thermowell_sizer.core.ptc19_3.verify import case_velocity
 from thermowell_sizer.core.units import (
@@ -135,6 +136,11 @@ THREADED_PRESSURE_LIMIT: Final = 2.0e6
 """Presión manométrica de diseño por encima de la cual se desaconseja la conexión roscada, Pa."""
 REF_CONNECTION: Final = "API RP 551 / práctica habitual de especificaciones de operadoras"
 
+# --- Recipientes y tanques ------------------------------------------------------------
+VESSEL_MIN_IMMERSION: Final = 0.45
+"""Inmersión habitual mínima en recipientes, m (práctica de especificaciones; ver
+biblioteca › Buenas prácticas de instalación)."""
+
 
 def _sensor_family(sensor: SensorType) -> str:
     if sensor is SensorType.BIMETALLIC:
@@ -188,16 +194,25 @@ def advise(inp: CalcInput, *, coating_max_temperature: float | None = None,
                             {"exposed": exposed, "needed": needed, "factor": factor},
                             {"exposed": QuantityKind.LENGTH, "needed": QuantityKind.LENGTH}))
 
-    # Posición de la punta en montaje perpendicular.
-    if pipe.orientation is MountingOrientation.PERPENDICULAR:
-        if exposed >= pipe.inner_diameter:
+    # Posición de la punta: perpendicular, inclinado (componente radial) o recipiente.
+    if pipe.orientation in (MountingOrientation.PERPENDICULAR, MountingOrientation.ANGLED,
+                            MountingOrientation.VESSEL):
+        depth = exposed * pipe.radial_factor
+        limit = pipe.tip_limit
+        if depth >= limit:
             out.append(Advisory("adv.tip_hits_wall", AdvisoryLevel.CRITICAL, REF_PRACTICE,
-                                {"exposed": exposed, "id": pipe.inner_diameter},
+                                {"exposed": depth, "id": limit},
                                 {"exposed": QuantityKind.LENGTH, "id": QuantityKind.LENGTH}))
-        elif exposed > TIP_WALL_FRACTION * pipe.inner_diameter:
+        elif depth > TIP_WALL_FRACTION * limit:
             out.append(Advisory("adv.tip_near_wall", AdvisoryLevel.WARNING, REF_PRACTICE,
-                                {"exposed": exposed, "id": pipe.inner_diameter},
+                                {"exposed": depth, "id": limit},
                                 {"exposed": QuantityKind.LENGTH, "id": QuantityKind.LENGTH}))
+    if pipe.orientation is MountingOrientation.ANGLED and pipe.mount_angle is None:
+        out.append(Advisory("adv.angle_missing", AdvisoryLevel.INFO, REF_PRACTICE))
+    if pipe.is_vessel and exposed < VESSEL_MIN_IMMERSION:
+        out.append(Advisory("adv.vessel_immersion", AdvisoryLevel.INFO, REF_PRACTICE,
+                            {"exposed": exposed, "min": VESSEL_MIN_IMMERSION},
+                            {"exposed": QuantityKind.LENGTH, "min": QuantityKind.LENGTH}))
     if pipe.nozzle_length > 0 and g.L0 == 0:
         out.append(Advisory("adv.shielded_length", AdvisoryLevel.INFO,
                             "ASME PTC 19.3 TW-2016, longitud protegida L0",
@@ -266,6 +281,8 @@ def advise(inp: CalcInput, *, coating_max_temperature: float | None = None,
     if inp.thermowell.connection.type is ConnectionType.THREADED and (
             proc.fluid_id in HAZARDOUS_FLUIDS or design_gauge > THREADED_PRESSURE_LIMIT):
         out.append(Advisory("adv.threaded_service", AdvisoryLevel.WARNING, REF_CONNECTION))
+    if inp.thermowell.connection.thread_type is ThreadType.G:
+        out.append(Advisory("adv.thread_g", AdvisoryLevel.INFO, REF_CONNECTION))
 
     # Prueba hidráulica de referencia.
     out.append(Advisory("adv.hydro_test", AdvisoryLevel.INFO, REF_HYDRO,
