@@ -41,7 +41,8 @@ lo mismo; quedan para diferenciar precios en el futuro).
 ## Generar el instalador
 
 El flujo **Release Windows** (`.github/workflows/release.yml`) corre en GitHub Actions al
-crear una etiqueta `v*` o a mano (*Actions › Release Windows › Run workflow*):
+crear una etiqueta `v*` o a mano (*Actions › Release Windows › Run workflow*; si se completa
+«etiqueta», p. ej. `v1.5.0`, crea esa versión y publica los archivos en ella):
 
 1. Instala dependencias y corre las pruebas.
 2. Genera el ejecutable con PyInstaller (`packaging/thermowell_sizer.spec`).
