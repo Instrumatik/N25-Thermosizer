@@ -66,3 +66,29 @@ def calc_input(tapered_geometry: ThermowellGeometry) -> CalcInput:
         ),
         sensor=SensorSpec(type=SensorType.RTD_PT100, sheath_diameter=6e-3),
     )
+
+
+def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
+    """Libera las ventanas Qt antes de que Python destruya la QApplication.
+
+    Sin esto, los widgets que quedan vivos al terminar la sesión se destruyen después
+    de la aplicación y el proceso termina con un segfault intermitente (código 139)
+    aunque todas las pruebas pasen.
+    """
+    import gc
+    import sys
+
+    if "PySide6.QtWidgets" not in sys.modules:
+        return
+    from PySide6.QtCore import QCoreApplication, QEvent
+    from PySide6.QtWidgets import QApplication
+
+    app = QApplication.instance()
+    if app is None:
+        return
+    for widget in QApplication.topLevelWidgets():
+        widget.close()
+        widget.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    QCoreApplication.processEvents()
+    gc.collect()
