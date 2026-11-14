@@ -10,7 +10,7 @@ listados del proyecto.
 
 ## 1. Instalación
 
-1. Ejecute `ThermoWellSizer-1.4.0-setup.exe`. Puede instalar solo para su usuario (no
+1. Ejecute `ThermoWellSizer-1.5.0-setup.exe`. Puede instalar solo para su usuario (no
    pide permisos de administrador) o para todos los usuarios del equipo.
 2. Opcionalmente, cree el acceso directo en el escritorio y asocie los archivos `.tws`
    para abrir los proyectos con doble clic.
@@ -207,6 +207,11 @@ termopares (ANSI e IEC), tolerancias de termopares, clases y cableado de Pt100 y
 de termómetros bimetálicos. **Ctrl+K** busca en toda la biblioteca, sin distinguir acentos y tolerando
 errores de tipeo. Las fichas «Conexión: …» y «Perfil: …» (y las de los campos «Tipo de
 conexión» y «Perfil del vástago») muestran esas tablas con la opción resaltada.
+
+Cada ficha «ⓘ» explica el término a fondo: **qué es**, **en esencia qué pasa y por qué**
+(el mecanismo físico o químico), **por qué importa**, **límites**, **cómo interpretarlo**,
+**qué hacer**, un **ejemplo numérico** y los **errores comunes**. Las pestañas **Glosario**
+y **Normas** muestran la ficha completa debajo de la definición breve.
 
 - **Asistente de material**: a partir de las condiciones del servicio (temperatura,
   cloruros, H₂S, agentes químicos, erosión) ordena los materiales en recomendados,

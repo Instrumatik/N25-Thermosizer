@@ -265,3 +265,15 @@ def test_library_reference_tab(window: MainWindow, library: Library) -> None:
     assert dlg.ref_list.count() >= 8
     dlg.ref_list.setCurrentRow(4)
     assert "<table" in dlg.ref_view.toHtml()
+
+
+def test_library_glossary_and_standards_show_full_card(window: MainWindow,
+                                                       library: Library) -> None:
+    from thermowell_sizer.ui.library_ui import LibraryWindow
+
+    dlg = LibraryWindow(library, window)
+    dlg.gl_list.setCurrentRow(0)
+    assert "Ejemplo num" in dlg.gl_view.toHtml() or "Numerical example" in dlg.gl_view.toHtml()
+    dlg.std_list.setCurrentRow(0)
+    html = dlg.std_view.toHtml()
+    assert "Errores comunes" in html or "Common mistakes" in html
