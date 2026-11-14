@@ -42,12 +42,30 @@ jobs:
           choco install innosetup --no-progress -y
           $version = python -c "import thermowell_sizer; print(thermowell_sizer.__version__)"
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DAppVersion=$version" packaging\installer.iss
+      - name: Generador de licencias (ejecutable de consola)
+        run: pyinstaller tools/keygen.py --onefile --console --name GeneradorLicencias --paths src --distpath dist/generador --noconfirm
+      - name: Paquete completo (zip)
+        shell: pwsh
+        run: |
+          $version = python -c "import thermowell_sizer; print(thermowell_sizer.__version__)"
+          $pkg = "dist/paquete/ThermoWellSizer-$version"
+          New-Item -ItemType Directory -Force -Path "$pkg/generador-licencias", "$pkg/documentacion" | Out-Null
+          Copy-Item dist/ThermoWellSizer-*-setup.exe $pkg
+          Copy-Item dist/generador/GeneradorLicencias.exe "$pkg/generador-licencias"
+          Copy-Item tools/keygen.py "$pkg/generador-licencias"
+          Copy-Item packaging/paquete/LEEME.txt $pkg
+          Copy-Item docs/manual-usuario.md, docs/licencias.md, CHANGELOG.md, LICENSE.txt "$pkg/documentacion"
+          Compress-Archive -Path $pkg -DestinationPath "dist/ThermoWellSizer-$version-paquete.zip" -Force
       - uses: actions/upload-artifact@v4
         with:
           name: ThermoWellSizer-windows
-          path: dist/ThermoWellSizer-*-setup.exe
+          path: |
+            dist/ThermoWellSizer-*-setup.exe
+            dist/ThermoWellSizer-*-paquete.zip
       - name: Publicar en la versión
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/ThermoWellSizer-*-setup.exe
+          files: |
+            dist/ThermoWellSizer-*-setup.exe
+            dist/ThermoWellSizer-*-paquete.zip

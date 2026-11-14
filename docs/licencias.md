@@ -47,8 +47,11 @@ crear una etiqueta `v*` o a mano (*Actions › Release Windows › Run workflow*
 2. Genera el ejecutable con PyInstaller (`packaging/thermowell_sizer.spec`).
 3. Lo ejecuta en modo de prueba (`TWS_SMOKE_TEST=1`: calcula un tag y genera un PDF).
 4. Arma el instalador con Inno Setup (`packaging/installer.iss`).
-5. Publica `ThermoWellSizer-<versión>-setup.exe` como artefacto y, si es una etiqueta,
-   en la página de la versión.
+5. Genera `GeneradorLicencias.exe` (este emisor, como ejecutable de consola) y arma
+   `ThermoWellSizer-<versión>-paquete.zip` con el instalador, el generador, el LEEME y la
+   documentación. El paquete **no** lleva la clave privada ni licencias.
+6. Publica el instalador y el paquete como artefacto y, si es una etiqueta, en la página
+   de la versión.
 
 Para hacerlo en un equipo Windows propio: `pip install ".[gui,reports]" pyinstaller`,
 `pyinstaller packaging/thermowell_sizer.spec --noconfirm` y luego

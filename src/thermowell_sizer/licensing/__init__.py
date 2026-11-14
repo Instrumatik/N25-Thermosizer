@@ -27,7 +27,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 PREFIX: Final = "TWS1"
 PRODUCT: Final = "ThermoWell Sizer"
-PUBLIC_KEY_B64: Final = "i82Je0PbXh5jSElhoXcJxHn7/n8SsnZikdUtiwkSmgg="
+PUBLIC_KEY_B64: Final = "H5nn8ML/DmHCDnnpjbA8QPtNNMb7hjJcVl3zEmibfNg="
 LICENSE_FILE: Final = "licencia.txt"
 FINGERPRINT_LEN: Final = 16
 
