@@ -5,7 +5,7 @@ Las usan la hoja de datos (página 2) y la memoria de cálculo (al inicio).
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Final
 from xml.sax.saxutils import escape
 
 from reportlab.lib.units import mm
@@ -17,7 +17,9 @@ from thermowell_sizer.i18n import Language
 from thermowell_sizer.reports.common import STATUS_RGB, TagReport
 from thermowell_sizer.reports.pdfbase import FONT, FONT_BOLD, LINE, SHADE, STYLES
 from thermowell_sizer.summary import (
+    CaseResults,
     asme_status,
+    auto_rows,
     calculated_results,
     input_rows,
     label,
@@ -91,9 +93,30 @@ def status_table(rep: TagReport, width: float) -> Table | None:
     return Table(rows, colWidths=[0.45 * width, 0.55 * width], style=TableStyle(st))
 
 
-def results_table(rep: TagReport, width: float) -> Table | None:
-    """«Resultados calculados» por caso de flujo, con el límite de cada valor."""
+MAX_CASES_PER_TABLE: Final = 3
+
+
+def results_tables(rep: TagReport, width: float, *, base_only: bool = False) -> list[Table]:
+    """«Resultados calculados» en tablas de hasta tres casos (legibles en A4).
+
+    Con ``base_only`` se omiten las variantes con sobreespesor consumido (hoja de datos).
+    """
     cases = calculated_results(rep.evaluation)
+    if base_only:
+        cases = [c for c in cases if "|" not in c.scope]
+    out: list[Table] = []
+    for i in range(0, len(cases), MAX_CASES_PER_TABLE):
+        t = results_table(rep, width, cases[i:i + MAX_CASES_PER_TABLE])
+        if t is not None:
+            out.append(t)
+    return out
+
+
+def results_table(rep: TagReport, width: float,
+                  cases: list[CaseResults] | None = None) -> Table | None:
+    """«Resultados calculados» por caso de flujo, con el límite de cada valor."""
+    if cases is None:
+        cases = calculated_results(rep.evaluation)
     if not cases:
         return None
     es, f = _es(rep), rep.fmt
@@ -144,3 +167,30 @@ def convention_table(rep: TagReport, width: float) -> Table:
     st = _style()
     st += [("SPAN", (0, 0), (1, 0)), ("ALIGN", (1, 1), (1, -1), "RIGHT")]
     return Table(rows, colWidths=[width - 30 * mm, 30 * mm], style=TableStyle(st))
+
+
+def auto_table(rep: TagReport, width: float, *, compact: bool = False) -> Table | None:
+    """«Selección automática y justificación»: dato, valor elegido y por qué."""
+    es, f = _es(rep), rep.fmt
+    q, _ = formatters(rep)
+    autos = auto_rows(rep.evaluation, es, q)
+    if not autos:
+        return None
+    rows: list[list[Any]] = [[f.t("res.auto_field"), f.t("res.auto_value"),
+                              f.t("res.auto_reason")]]
+    st = _style()
+    last = ""
+    for ar in autos:
+        if ar.block != last:
+            rows.append([_p(ar.block, bold=True), "", ""])
+            n = len(rows) - 1
+            st += [("SPAN", (0, n), (-1, n)), ("BACKGROUND", (0, n), (-1, n), SHADE)]
+            last = ar.block
+        reason = escape(ar.reason)
+        if ar.alternatives and not compact:
+            reason += f"<br/><i>{escape(f.t('res.auto_alt'))}: {escape(ar.alternatives)}</i>"
+        rows.append([_p(ar.item), _p(ar.value), _p(reason, raw=True)])
+    w = [34 * mm, 42 * mm, 0.0]
+    w[2] = width - w[0] - w[1]
+    return Table(rows, colWidths=w, style=TableStyle(st), repeatRows=1)
+

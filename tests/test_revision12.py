@@ -189,14 +189,15 @@ def test_render_card_with_example(evaluations: dict[str, object]) -> None:
 
 
 def test_every_editor_field_has_a_card(library: Library) -> None:
-    """Ningún campo del editor, de las opciones ni del proyecto queda sin ficha."""
+    """Ningún campo del editor, de las opciones ni del proyecto queda sin ficha (búsqueda)."""
     pytest.importorskip("PySide6")
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-    from PySide6.QtWidgets import QApplication, QCheckBox, QFormLayout, QLabel
+    from PySide6.QtWidgets import QApplication, QCheckBox, QFormLayout, QLabel, QToolButton
 
     from thermowell_sizer.core.models import EngineOptions
     from thermowell_sizer.project import ProjectInfo
     from thermowell_sizer.ui.dialogs import OptionsDialog, ProjectDialog
+    from thermowell_sizer.ui.infocard_ui import key_for_label
     from thermowell_sizer.ui.tag_editor import TagEditor
 
     global _QT_APP  # la aplicación debe vivir hasta el final de la sesión
@@ -205,23 +206,31 @@ def test_every_editor_field_has_a_card(library: Library) -> None:
     widgets = [*editor.pages, OptionsDialog(EngineOptions()),
                ProjectDialog(ProjectInfo(name="x"), ProjectSettings())]
     missing: list[str] = []
+    keys: set[str] = set()
+    buttons = 0
     for w in widgets:
+        buttons += sum(1 for b in w.findChildren(QToolButton) if b.text() == "ⓘ")
         for form in w.findChildren(QFormLayout):
             for row in range(form.rowCount()):
+                texts = []
                 item = form.itemAt(row, QFormLayout.ItemRole.LabelRole)
                 if item is not None and isinstance(item.widget(), QLabel):
-                    text = item.widget().text()  # type: ignore[union-attr]
-                    if text:
-                        missing.append(text)
+                    texts.append(item.widget().text())  # type: ignore[union-attr]
                 span = form.itemAt(row, QFormLayout.ItemRole.SpanningRole)
                 if span is not None and isinstance(span.widget(), QCheckBox):
-                    missing.append(span.widget().text())  # type: ignore[union-attr]
-    keys = set(editor.info_keys)
+                    texts.append(span.widget().text())  # type: ignore[union-attr]
+                for text in filter(None, texts):
+                    key = key_for_label(text)
+                    if key is None:
+                        missing.append(text)
+                    else:
+                        keys.add(key)
     for w in widgets:
         w.deleteLater()
     editor.deleteLater()
     QApplication.processEvents()
     assert not missing, missing
+    assert buttons == 0  # sin botones «ⓘ»: las fichas se buscan en la biblioteca
     assert len(keys) >= 50
 
 

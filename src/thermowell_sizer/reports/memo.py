@@ -26,6 +26,7 @@ from reportlab.platypus.tableofcontents import TableOfContents
 from thermowell_sizer.core.models import CheckStatus
 from thermowell_sizer.core.trace import TraceEntry
 from thermowell_sizer.core.units import QuantityKind
+from thermowell_sizer.i18n import Language
 from thermowell_sizer.reports.charts import sensitivity_png
 from thermowell_sizer.reports.common import (
     STATUS_RGB,
@@ -39,9 +40,10 @@ from thermowell_sizer.reports.datasheet import calc_rows, sections
 from thermowell_sizer.reports.drawing import thermowell_drawing
 from thermowell_sizer.reports.mathrender import plain, render_png
 from thermowell_sizer.reports.overview import (
+    auto_table,
     convention_table,
     inputs_table,
-    results_table,
+    results_tables,
     status_table,
 )
 from thermowell_sizer.reports.pdfbase import (
@@ -59,6 +61,7 @@ from thermowell_sizer.reports.pdfbase import (
     footer,
     title_block,
 )
+from thermowell_sizer.summary import auto_note
 
 BODY_W = PAGE_W - 2 * MARGIN
 EQ_MAX_W = 51 * mm
@@ -160,9 +163,11 @@ def build_memo(rep: TagReport, path: Path) -> Path:
     # Resumen al inicio: datos de entrada de la planilla, resultados, estado y convención
     story += [_p(f.t("ov.title"), "h1"), _p(f.t("ov.inputs_title"), "h2"),
               _p(f.t("ov.inputs_text"), "body"), inputs_table(rep, BODY_W)]
-    results_t = results_table(rep, BODY_W)
-    if results_t is not None:
-        story += [_p(f.t("res.calculated"), "h2"), results_t]
+    results_ts = results_tables(rep, BODY_W)
+    if results_ts:
+        story.append(_p(f.t("res.calculated"), "h2"))
+        for results_t in results_ts:
+            story += [results_t, Spacer(1, 2 * mm)]
     status_t = status_table(rep, BODY_W * 0.7)
     if status_t is not None:
         story += [_p(f.t("res.asme_status"), "h2"), status_t]
@@ -176,6 +181,14 @@ def build_memo(rep: TagReport, path: Path) -> Path:
                             header=False))
     story.append(_p(f"{f.t('props_source')}: {inp.process.properties.source_note or '—'}",
                     "small"))
+
+    story.append(_p(f.t("m.auto"), "h1"))
+    auto_t = auto_table(rep, BODY_W)
+    if auto_t is None:
+        story.append(_p(f.t("m.auto_none"), "body"))
+    else:
+        story += [_p(f.t("m.auto_text"), "body"), auto_t, Spacer(1, 2 * mm),
+                  _p(auto_note(f.lang is Language.ES), "small")]
 
     story.append(_p(f.t("m.material"), "h1"))
     mat = ev.material
@@ -304,5 +317,5 @@ def _check_kind(cid: str) -> tuple[QuantityKind, bool]:
     return {"material_temperature": (QuantityKind.TEMPERATURE, False),
             "low_velocity": (QuantityKind.VELOCITY, False),
             "frequency_limit": (QuantityKind.FREQUENCY, False),
-            "inline_lockin_dwell": (QuantityKind.FREQUENCY, False)}.get(
+            "inline_lockin_dwell": (QuantityKind.DIMENSIONLESS, False)}.get(
         cid, (QuantityKind.STRESS, False))

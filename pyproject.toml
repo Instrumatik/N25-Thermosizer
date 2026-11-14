@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "thermowell-sizer"
-version = "1.2.0"
+version = "1.5.0"
 description = "Dimensionamiento y verificación de termopozos según ASME PTC 19.3 TW-2016"
 readme = "README.md"
 requires-python = ">=3.12"

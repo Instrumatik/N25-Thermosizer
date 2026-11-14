@@ -131,6 +131,34 @@ UI: Final[dict[str, tuple[str, str]]] = {
     "f.auto_props": ("Calcular ρ y μ con CoolProp / biblioteca",
                      "Compute ρ and μ with CoolProp / library"),
     "f.density": ("Densidad", "Density"),
+    "f.auto_select": ("Selección de datos (manual / automática)",
+                      "Data selection (manual / automatic)"),
+    "f.mode_process": ("Modo · propiedades del fluido", "Mode · fluid properties"),
+    "f.mode_pipe": ("Modo · tubería", "Mode · pipe"),
+    "mode.auto_process": ("Automático (CoolProp / biblioteca)", "Automatic (CoolProp / library)"),
+    "mode.auto_pipe": ("Automático (tabla NPS y schedule)", "Automatic (NPS and schedule table)"),
+    "search.card": ("Ficha", "Card"),
+    "blk.connection": ("Conexión a proceso", "Process connection"),
+    "blk.material": ("Material y protecciones", "Material and protections"),
+    "blk.geometry": ("Geometría del termopozo", "Thermowell geometry"),
+    "f.mode_material": ("Modo · material y protecciones", "Mode · material and protections"),
+    "f.mode_connection": ("Modo · conexión", "Mode · connection"),
+    "f.mode_geometry": ("Modo · geometría", "Mode · geometry"),
+    "f.mode_sensor": ("Modo · vaina del sensor", "Mode · sensor sheath"),
+    "mode.manual": ("Manual (los cargo yo)", "Manual (I enter them)"),
+    "mode.auto": ("Automático (recomienda el programa)", "Automatic (program recommends)"),
+    "mode.auto_hint": ("Los campos en gris los completa el programa al calcular, con su "
+                       "justificación en «Resumen ASME» y en la memoria. Son recomendaciones "
+                       "orientativas sujetas a revisión de un ingeniero.",
+                       "Greyed-out fields are filled by the program on calculation, with their "
+                       "justification in «ASME summary» and in the memo. They are guidance, "
+                       "subject to review by an engineer."),
+    "res.auto_title": ("Selección automática y justificación", "Automatic selection and rationale"),
+    "res.auto_block": ("Bloque", "Block"),
+    "res.auto_field": ("Dato", "Item"),
+    "res.auto_value": ("Valor elegido", "Chosen value"),
+    "res.auto_reason": ("Justificación", "Rationale"),
+    "res.auto_alt": ("Alternativas", "Alternatives"),
     "f.std_density": ("Densidad estándar (15 °C, 1 atm)", "Standard density (15 °C, 1 atm)"),
     "f.viscosity": ("Viscosidad dinámica", "Dynamic viscosity"),
     "f.prop_source": ("Fuente", "Source"),
@@ -151,6 +179,18 @@ UI: Final[dict[str, tuple[str, str]]] = {
     "f.pipe_id": ("Diámetro interno", "Inner diameter"),
     "f.pipe_custom": ("Diámetro interno manual", "Manual inner diameter"),
     "f.orientation": ("Orientación", "Orientation"),
+    "f.mount_angle": ("Ángulo de montaje (termopozo / eje de la tubería)",
+                      "Mounting angle (thermowell / pipe axis)"),
+    "f.liquid_depth": ("Profundidad útil del líquido (opcional)",
+                       "Usable liquid depth (optional)"),
+    "f.vessel_hint": ("Recipiente: cargue el diámetro interno del recipiente, el espesor de "
+                      "pared y Hs de la tobera. Sin flujo se usa velocidad 0; si hay "
+                      "agitación, agregue un caso con su velocidad.",
+                      "Vessel: enter the vessel inside diameter, the wall thickness and the "
+                      "nozzle Hs. With no flow velocity 0 is used; if there is agitation, add "
+                      "a case with its velocity."),
+    "f.thread": ("Rosca", "Thread"),
+    "f.conn_code": ("Código de hoja de datos: tipo {code}", "Data sheet code: type {code}"),
     "f.insulation": ("Espesor de aislamiento", "Insulation thickness"),
     "f.nozzle": ("Altura de la brida de montaje", "Mounting flange height"),
     "f.mount": ("Hs, altura de la brida de montaje (cara externa del caño → cara de la brida)",
@@ -271,9 +311,9 @@ UI: Final[dict[str, tuple[str, str]]] = {
     "res.ref": ("Referencia", "Reference"),
     "res.summary": ("Resumen por caso", "Case summary"),
     "res.overview": ("Resumen ASME", "ASME overview"),
-    "res.card_hint": ("Doble clic (o clic en el encabezado ⓘ): abre la ficha con la explicación, "
+    "res.card_hint": ("Doble clic (o clic en el encabezado): abre la ficha con la explicación, "
                       "las fórmulas y un ejemplo.",
-                      "Double-click (or click the ⓘ header): opens the card with the "
+                      "Double-click (or click the header): opens the card with the "
                       "explanation, formulas and an example."),
     "res.asme_status": ("Estado ASME", "ASME status"),
     "res.calculated": ("Resultados calculados", "Calculated results"),
@@ -456,6 +496,9 @@ ENUM_TEXT: Final[dict[str, tuple[str, str]]] = {
     "socket_weld": ("Socket weld", "Socket weld"), "weld_in": ("Soldado", "Weld-in"),
     "van_stone": ("Van Stone", "Van Stone"), "sanitary": ("Sanitario", "Sanitary"),
     "perpendicular": ("Perpendicular", "Perpendicular"), "angled": ("Inclinado", "Angled"),
+    "vessel": ("En recipiente", "In vessel"),
+    "npt": ("NPT (cónica, ASME B1.20.1)", "NPT (taper, ASME B1.20.1)"),
+    "g": ("G / BSPP (paralela, ISO 228-1)", "G / BSPP (parallel, ISO 228-1)"),
     "elbow_tip_upstream": ("En codo, punta aguas arriba", "Elbow, tip upstream"),
     "elbow_tip_downstream": ("En codo, punta aguas abajo", "Elbow, tip downstream"),
     "rtd_pt100": ("RTD Pt100", "RTD Pt100"), "rtd_pt1000": ("RTD Pt1000", "RTD Pt1000"),

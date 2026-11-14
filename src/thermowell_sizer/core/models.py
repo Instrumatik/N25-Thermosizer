@@ -97,6 +97,17 @@ class MountingOrientation(StrEnum):
     ANGLED = "angled"
     ELBOW_TIP_UPSTREAM = "elbow_tip_upstream"
     ELBOW_TIP_DOWNSTREAM = "elbow_tip_downstream"
+    VESSEL = "vessel"
+    """En un recipiente o tanque (sin cañería; flujo nulo o de agitación)."""
+
+
+class ThreadType(StrEnum):
+    """Rosca de proceso de una conexión roscada."""
+
+    NPT = "npt"
+    """Cónica ASME B1.20.1: sella en la rosca."""
+    G = "g"
+    """Paralela ISO 228-1 (BSPP): sella con junta o anillo en la cara."""
 
 
 class SensorType(StrEnum):
@@ -228,6 +239,14 @@ class PipeData(_Model):
     inner_diameter: Positive = Field(description="m")
     material_id: str = ""
     orientation: MountingOrientation = MountingOrientation.PERPENDICULAR
+    mount_angle: float | None = Field(
+        default=None, gt=0.0, le=90.0,
+        description="Ángulo entre el eje del termopozo y el eje de la tubería, grados "
+                    "(montaje inclinado; 90 = perpendicular)")
+    liquid_depth: NonNegative | None = Field(
+        default=None,
+        description="Recipiente: profundidad útil del líquido en la dirección del termopozo, "
+                    "desde la pared interna, m")
     insulation_thickness: NonNegative = Field(default=0.0, description="m")
     wall_thickness: NonNegative | None = Field(
         default=None, description="Espesor de pared de la tubería, m (del schedule o a mano)")
@@ -252,6 +271,25 @@ class PipeData(_Model):
         return data
 
     @property
+    def is_vessel(self) -> bool:
+        """Montaje en recipiente o tanque."""
+        return self.orientation is MountingOrientation.VESSEL
+
+    @property
+    def radial_factor(self) -> float:
+        """Fracción de la inmersión que avanza hacia la pared opuesta (sen del ángulo)."""
+        if self.orientation is MountingOrientation.ANGLED and self.mount_angle:
+            return math.sin(math.radians(self.mount_angle))
+        return 1.0
+
+    @property
+    def tip_limit(self) -> float:
+        """Distancia disponible hasta la pared opuesta (o la profundidad útil del líquido)."""
+        if self.is_vessel and self.liquid_depth:
+            return min(self.liquid_depth, self.inner_diameter)
+        return self.inner_diameter
+
+    @property
     def outer_diameter(self) -> float | None:
         """Diámetro exterior, m (si se conoce el espesor)."""
         if self.wall_thickness is None:
@@ -267,6 +305,23 @@ class ProcessConnection(_Model):
     size: str = Field(default="", description="p. ej. '1-1/2 in' o '3/4 NPT'")
     rating_class: int | None = Field(default=None, description="Clase ASME B16.5: 150...2500")
     face: FlangeFace | None = None
+    thread: ThreadType | None = Field(
+        default=None, description="Rosca de una conexión roscada (None = NPT)")
+
+    @property
+    def thread_type(self) -> ThreadType | None:
+        """Rosca efectiva: NPT por defecto en las roscadas, ``None`` en las demás."""
+        if self.type is not ConnectionType.THREADED:
+            return None
+        return self.thread or ThreadType.NPT
+
+    @property
+    def datasheet_code(self) -> str:
+        """Código habitual de hoja de datos: H bridado, S soldado, R roscado NPT, G roscado G."""
+        if self.type is ConnectionType.THREADED:
+            return "G" if self.thread_type is ThreadType.G else "R"
+        return {ConnectionType.FLANGED: "H", ConnectionType.WELD_IN: "S",
+                ConnectionType.SOCKET_WELD: "S"}.get(self.type, "")
 
     @model_validator(mode="after")
     def _flange_fields(self) -> Self:

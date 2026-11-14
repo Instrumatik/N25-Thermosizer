@@ -19,7 +19,13 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Final
 
-from thermowell_sizer.core.models import CalcInput, ConnectionType, FlangeFace, ShankProfile
+from thermowell_sizer.core.models import (
+    CalcInput,
+    ConnectionType,
+    FlangeFace,
+    ShankProfile,
+    ThreadType,
+)
 
 MM: Final = 1e-3
 INCH: Final = 0.0254
@@ -69,6 +75,9 @@ RAISED_FACE: Final[dict[str, float]] = {"1": 50.8, "1-1/2": 73.2, "2": 92.1}
 
 def _size_key(text: str) -> str:
     """'1-1/2 in', '1 1/2"', '3/4 NPT' -> clave de tabla."""
+    text = text.strip()
+    if text[:2] in ("G ", "g "):  # rosca G (ISO 228): «G 3/4»
+        text = text[2:]
     clean = text.replace('"', " ").replace("in", " ").replace("NPT", " ").replace("½", "-1/2")
     parts = clean.replace("-", " ").split()
     if len(parts) >= 2 and "/" in parts[1]:
@@ -219,6 +228,7 @@ SKETCH_LABELS_ES: Final[dict[str, str]] = {
     "weld": "Soldadura", "pipe": "Pared interna de la tubería", "flow": "Flujo",
     "socket": "Socket weld", "weld_in": "Para soldar", "van_stone": "Van Stone",
     "sanitary": "Conexión sanitaria", "threaded": "Rosca NPT", "flanged": "Brida del termopozo",
+    "threaded_g": "Rosca G (ISO 228)",
 }
 SKETCH_LABELS_EN: Final[dict[str, str]] = {
     "U": "U · Insertion length", "L": "L · Unsupported length",
@@ -229,6 +239,7 @@ SKETCH_LABELS_EN: Final[dict[str, str]] = {
     "weld": "Weld", "pipe": "Pipe inside wall", "flow": "Flow",
     "socket": "Socket weld", "weld_in": "Weld-in", "van_stone": "Van Stone",
     "sanitary": "Sanitary", "threaded": "NPT thread", "flanged": "Thermowell flange",
+    "threaded_g": "G thread (ISO 228)",
 }
 
 
@@ -265,7 +276,7 @@ def build_sketch(inp: CalcInput, tx: SketchText) -> Sketch:
                                          "thread"))
         sk.hdims.append(HDim(x, x + thread_len, -1,
                              tx.lab("I")))
-        conn_text = tx.lab("threaded")
+        conn_text = tx.lab("threaded_g" if conn.thread_type is ThreadType.G else "threaded")
         x += thread_len
         conn_r = thread_r
     elif conn.type in (ConnectionType.FLANGED, ConnectionType.VAN_STONE,

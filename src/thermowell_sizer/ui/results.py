@@ -29,6 +29,8 @@ from thermowell_sizer.reports.common import CRITERION_NAMES, SCOPE_NAMES
 from thermowell_sizer.services import Evaluation, render_advisory
 from thermowell_sizer.summary import (
     asme_status,
+    auto_note,
+    auto_rows,
     calculated_results,
     label,
     length_convention,
@@ -47,7 +49,7 @@ CRITERION_KIND: dict[str, tuple[QuantityKind, bool]] = {
     "flange_rating": (QuantityKind.PRESSURE, True),
     "low_velocity": (QuantityKind.VELOCITY, False),
     "frequency_limit": (QuantityKind.FREQUENCY, False),
-    "inline_lockin_dwell": (QuantityKind.FREQUENCY, False),
+    "inline_lockin_dwell": (QuantityKind.DIMENSIONLESS, False),
     "fatigue_data": (QuantityKind.STRESS, False),
 }
 MARGIN_DECIMALS = 1
@@ -95,11 +97,6 @@ def _n(value: float, decimals: int) -> str:
     return fmt(value, decimals)
 
 
-def _info(key: str) -> str:
-    """Enlace «ⓘ» a la ficha de una clave."""
-    return f"<a href='card:{key}' style='text-decoration:none'>ⓘ</a>"
-
-
 def overview_html(ev: Evaluation) -> str:
     """HTML de la pestaña «Resumen ASME»."""
     es = STATE.language.value == "es"
@@ -108,10 +105,28 @@ def overview_html(ev: Evaluation) -> str:
         color = STATUS_COLORS[line.status]
         extra = f" (V/Ve = {fmt(line.ratio, 2)})" if line.ratio is not None else ""
         bold = ("<b>", "</b>") if line.key == "topic.overall" else ("", "")
-        out.append(f"<tr><td>{bold[0]}{label(line.key, es)}{bold[1]} {_info(line.key)}</td>"
+        out.append(f"<tr><td>{bold[0]}{label(line.key, es)}{bold[1]}</td>"
                    f"<td><span style='color:{color}'>●</span> {bold[0]}"
                    f"{label(line.verdict, es)}{bold[1]}{extra}</td></tr>")
     out.append("</table>")
+    autos = auto_rows(ev, es, _q)
+    if autos:
+        out.append(f"<h3>{t('res.auto_title')}</h3>"
+                   "<table cellspacing='0' cellpadding='3' border='1' "
+                   "style='border-collapse:collapse'><tr>"
+                   f"<th width='20%'>{t('res.auto_field')}</th>"
+                   f"<th width='22%'>{t('res.auto_value')}</th>"
+                   f"<th width='58%'>{t('res.auto_reason')}</th></tr>")
+        last = ""
+        for ar in autos:
+            if ar.block != last:
+                out.append(f"<tr><td colspan='3'><b>{html.escape(ar.block)}</b></td></tr>")
+                last = ar.block
+            alt = (f"<br/><i>{t('res.auto_alt')}: {html.escape(ar.alternatives)}</i>"
+                   if ar.alternatives else "")
+            out.append(f"<tr><td>{html.escape(ar.item)}</td><td><b>{html.escape(ar.value)}</b>"
+                       f"</td><td>{html.escape(ar.reason)}{alt}</td></tr>")
+        out.append(f"</table><p><small>{html.escape(auto_note(es))}</small></p>")
     cases = calculated_results(ev)
     if cases:
         out.append(f"<h3>{t('res.calculated')}</h3>"
@@ -122,7 +137,7 @@ def overview_html(ev: Evaluation) -> str:
                        f"<th>{t('res.limit')}</th>")
         out.append("</tr>")
         for i, row in enumerate(cases[0].rows):
-            out.append(f"<tr><td>{label(row.key, es)} {_info(row.key)}</td>"
+            out.append(f"<tr><td>{label(row.key, es)}</td>"
                        f"<td><i>{row.symbol}</i></td>")
             for c in cases:
                 r = c.rows[i]
@@ -132,7 +147,7 @@ def overview_html(ev: Evaluation) -> str:
                            f"</td><td align='right'>{html.escape(limit_text(r, _q, _n))}</td>")
             out.append("</tr>")
         out.append("</table>")
-    out.append(f"<h3>{t('res.convention')} {_info('f.mount')}</h3>"
+    out.append(f"<h3>{t('res.convention')}</h3>"
                "<table cellspacing='0' cellpadding='3'>")
     for key, value in length_convention(ev):
         out.append(f"<tr><td>{label(key, es)}</td><td align='right'>"
@@ -171,9 +186,6 @@ class ResultsPanel(QWidget):
         self.advice = QTextBrowser()
         self.trace = QTextBrowser()
         self.overview = QTextBrowser()
-        self.overview.setOpenLinks(False)
-        self.overview.anchorClicked.connect(
-            lambda url: show_card(url.toString().removeprefix("card:"), self))
         self.alt_list = QListWidget()
         self.btn_alt = QPushButton(t("act.optimize"))
         self.btn_apply = QPushButton(t("res.apply"))
@@ -182,6 +194,7 @@ class ResultsPanel(QWidget):
         self.btn_apply.clicked.connect(self._apply)
         self.alt_list.currentRowChanged.connect(lambda r: self.btn_apply.setEnabled(r >= 0))
         alt = QWidget()
+        self.alt_page = alt
         alt_l = QVBoxLayout(alt)
         alt_l.addWidget(self.alt_list)
         row = QHBoxLayout()
@@ -239,8 +252,9 @@ class ResultsPanel(QWidget):
         th = ev.thermal
         if th is not None:
             parts.append(t("res.thermal", tau=fmt(th.tau, 0), t90=fmt(th.t90, 0),
-                           err=fmt_quantity(abs(th.immersion_error),
-                                            QuantityKind.TEMPERATURE_DIFFERENCE)))
+                           err=(f"{fmt(0.0, 2)} K" if abs(th.immersion_error) < 0.01 else
+                                fmt_quantity(abs(th.immersion_error),
+                                             QuantityKind.TEMPERATURE_DIFFERENCE))))
         self.lbl_summary.setText(" · ".join(parts))
         self._fill_checks(res.checks)
         self._fill_cases(ev)
@@ -316,7 +330,7 @@ class ResultsPanel(QWidget):
     def _case_header_clicked(self, col: int) -> None:
         item = self.cases.horizontalHeaderItem(col)
         if item is not None:
-            show_card(item.text().removesuffix(" ⓘ"), self)
+            show_card(item.text(), self)
 
     def _fill_cases(self, ev: Evaluation) -> None:
         res = ev.result
@@ -324,7 +338,7 @@ class ResultsPanel(QWidget):
         heads = ["V", "Re", "N_S", "f_s", "f_n", "H_c", "f_n,c", "N_Sc", "f_s / f_n,c",
                  "V_IR"]
         self.cases.setColumnCount(len(heads))
-        self.cases.setHorizontalHeaderLabels([f"{h} ⓘ" for h in heads])
+        self.cases.setHorizontalHeaderLabels(heads)
         self.cases.horizontalHeader().setToolTip(t("res.card_hint"))
         self.cases.setRowCount(len(res.cases))
         self.cases.setVerticalHeaderLabels([scope_label(c.scope) for c in res.cases])

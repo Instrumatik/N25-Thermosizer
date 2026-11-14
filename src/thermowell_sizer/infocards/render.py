@@ -83,6 +83,50 @@ def _example_rows(card: Card, ev: Evaluation | None, qfmt: QFmt, es: bool,
     return rows
 
 
+def rich_text(text: str) -> str:
+    """Texto de ficha a HTML: párrafos separados por línea en blanco y listas.
+
+    Las líneas que empiezan con «- » forman una lista con viñetas y las que empiezan con
+    «1. », «2. »… una lista numerada.
+    """
+    out: list[str] = []
+    for block in text.split("\n\n"):
+        lines = [ln.strip() for ln in block.strip().splitlines() if ln.strip()]
+        if not lines:
+            continue
+        if all(ln.startswith("- ") for ln in lines):
+            items = "".join(f"<li>{html.escape(ln[2:])}</li>" for ln in lines)
+            out.append(f"<ul>{items}</ul>")
+        elif all(ln.split(" ", 1)[0].rstrip(".").isdigit() and ln.split(" ", 1)[0].endswith(".")
+                 for ln in lines):
+            items = "".join(f"<li>{html.escape(ln.split(' ', 1)[1])}</li>" for ln in lines)
+            out.append(f"<ol>{items}</ol>")
+        else:
+            out.append(f"<p>{html.escape(' '.join(lines))}</p>")
+    return "".join(out)
+
+
+def _table_html(card: Card, es: bool) -> str:
+    """Tabla de guía con la fila de la ficha resaltada."""
+    lang = 0 if es else 1
+    head, *rows = card.table
+    out = [f"<h4>{SECTION_TITLES['table'][lang]}</h4>",
+           '<table border="1" cellspacing="0" cellpadding="4" width="100%"><tr>']
+    out += [f"<th>{html.escape(c[lang])}</th>" for c in head]
+    out.append("</tr>")
+    for i, row in enumerate(rows, start=1):
+        style = ' style="background-color:#fff3c4"' if i == card.highlight else ""
+        out.append(f"<tr{style}>")
+        for j, c in enumerate(row):
+            txt = html.escape(c[lang])
+            out.append(f"<td><b>{txt}</b></td>" if j == 0 else f"<td>{txt}</td>")
+        out.append("</tr>")
+    out.append("</table>")
+    if card.table_note[lang]:
+        out.append(f"<p><i>{html.escape(card.table_note[lang])}</i></p>")
+    return "".join(out)
+
+
 def render_card(card: Card, ev: Evaluation | None, reference: Evaluation | None, *,
                 es: bool, qfmt: QFmt, tag: str = "", images: bool = True) -> RenderedCard:
     """HTML de la ficha. ``ev`` es el tag actual; ``reference`` el caso de referencia."""
@@ -92,8 +136,9 @@ def render_card(card: Card, ev: Evaluation | None, reference: Evaluation | None,
     for sec in SECTIONS:
         text = card.text(sec, es)
         if text:
-            parts.append(f"<h4>{SECTION_TITLES[sec][0 if es else 1]}</h4>"
-                         f"<p>{html.escape(text)}</p>")
+            parts.append(f"<h4>{SECTION_TITLES[sec][0 if es else 1]}</h4>{rich_text(text)}")
+    if card.table:
+        parts.append(_table_html(card, es))
     if card.formulas:
         parts.append(f"<h4>{SECTION_TITLES['formulas'][0 if es else 1]}</h4>")
         for i, expr in enumerate(card.formulas):
@@ -144,4 +189,8 @@ def search_text(card: Card) -> str:
     chunks = [card.id, *card.title]
     for sec in SECTIONS:
         chunks += list(getattr(card, sec))
+    for row in card.table:
+        for cell in row:
+            chunks += list(cell)
+    chunks += list(card.table_note)
     return " ".join(chunks).lower()

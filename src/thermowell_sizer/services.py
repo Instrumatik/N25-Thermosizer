@@ -10,6 +10,7 @@ import io
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from thermowell_sizer.core.advisories import Advisory, AdvisoryLevel, advise
 from thermowell_sizer.core.models import (
@@ -60,6 +61,9 @@ from thermowell_sizer.properties.fluids import (
     thermal_properties,
 )
 
+if TYPE_CHECKING:
+    from thermowell_sizer.autodesign import Decision
+
 FLANGED_TYPES = (ConnectionType.FLANGED, ConnectionType.VAN_STONE)
 
 
@@ -94,6 +98,9 @@ class Evaluation:
     warnings: list[str] = field(default_factory=list)
     thermal: ThermalEstimate | None = None
     advisories: list[Advisory] = field(default_factory=list)
+    decisions: list[Decision] = field(default_factory=list)
+    """Elecciones automáticas con su justificación (bloques en modo automático)."""
+    auto_blocks: tuple[str, ...] = ()
 
     @property
     def status(self) -> CheckStatus | None:
@@ -187,6 +194,56 @@ def resolve_options(
 MANUAL_MATERIAL_NOTE = "E y/o S cargados a mano por el usuario"
 
 
+def _material(inp: CalcInput, library: Library) -> MaterialProperties:
+    """Propiedades del material a las temperaturas del tag, con E y S manuales si los hay."""
+    mat = library.material_properties(inp.thermowell.material.material_id,
+                                      inp.process.operating_temperature,
+                                      inp.process.design_temperature)
+    ref = inp.thermowell.material
+    if ref.elastic_modulus is None and ref.allowable_stress is None:
+        return mat
+    update: dict[str, object] = {}
+    if ref.elastic_modulus is not None:
+        update["elastic_modulus"] = ref.elastic_modulus
+    if ref.allowable_stress is not None:
+        update["allowable_stress"] = ref.allowable_stress
+        update["allowable_stress_design"] = ref.allowable_stress
+    update["source_note"] = (mat.source_note + " · " if mat.source_note
+                             else "") + MANUAL_MATERIAL_NOTE
+    return mat.model_copy(update=update)
+
+
+def _apply_auto(record: TagRecord, inp: CalcInput, library: Library,
+                settings: ProjectSettings, ev: Evaluation) -> CalcInput:
+    """Completa los bloques automáticos y guarda las decisiones en ``ev``."""
+    from thermowell_sizer.autodesign import auto_design
+
+    base = record.model_copy(update={"auto_blocks": (), "auto_properties": False})
+
+    def check(candidate: CalcInput) -> tuple[CheckStatus, float] | None:
+        try:
+            ev_c = evaluate(base.model_copy(update={"input": candidate}), library, settings)
+        except ValueError:  # geometría fuera de las correlaciones de la norma
+            return None
+        if ev_c.status is None or ev_c.result is None:
+            return None
+        margins = [c.margin_pct for c in ev_c.result.checks]
+        return ev_c.status, min(margins, default=0.0)
+
+    folder = None
+    try:
+        from thermowell_sizer.ui.state import STATE
+
+        folder = STATE.data_folder
+    except ImportError:  # pragma: no cover - sin interfaz
+        folder = None
+    result = auto_design(record, inp, library, settings, check, folder)
+    ev.decisions = result.decisions
+    ev.auto_blocks = tuple(record.auto_blocks)
+    ev.input = result.input
+    return result.input
+
+
 def evaluate(record: TagRecord, library: Library, settings: ProjectSettings) -> Evaluation:
     """Evalúa un tag: propiedades del fluido, material, rating de brida y verificación."""
     inp = record.input
@@ -201,26 +258,13 @@ def evaluate(record: TagRecord, library: Library, settings: ProjectSettings) -> 
             ev.input = inp
         except FluidPropertyError:
             ev.warnings.append("svc.fluid_properties_failed")
+    if record.auto_blocks:
+        inp = _apply_auto(record, inp, library, settings, ev)
     try:
-        ev.material = library.material_properties(
-            inp.thermowell.material.material_id,
-            inp.process.operating_temperature,
-            inp.process.design_temperature,
-        )
+        ev.material = _material(inp, library)
     except KeyError:
         ev.errors.append("svc.material_unknown")
         return ev
-    ref = inp.thermowell.material
-    if ref.elastic_modulus is not None or ref.allowable_stress is not None:
-        update: dict[str, object] = {}
-        if ref.elastic_modulus is not None:
-            update["elastic_modulus"] = ref.elastic_modulus
-        if ref.allowable_stress is not None:
-            update["allowable_stress"] = ref.allowable_stress
-            update["allowable_stress_design"] = ref.allowable_stress
-        update["source_note"] = (ev.material.source_note + " · " if ev.material.source_note
-                                 else "") + MANUAL_MATERIAL_NOTE
-        ev.material = ev.material.model_copy(update=update)
     ev.options, notes = resolve_options(inp, record.options, library, settings)
     ev.warnings.extend(notes)
     ev.result = verify(inp, ev.material, ev.options)
