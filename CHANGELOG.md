@@ -20,6 +20,10 @@ entender cada término sin buscar fuera del programa.
   Solo resúmenes y números de párrafo, sin texto de las normas.
 - Las fichas nuevas aparecen en la búsqueda Ctrl+K. Las listas y párrafos de las fichas se
   muestran con formato.
+- **Paquete de distribución**: la versión publica también `ThermoWellSizer-1.5.0-paquete.zip`
+  (instalador, `GeneradorLicencias.exe`, LEEME y documentación).
+- **Clave de licencias nueva**: se generó un par Ed25519 nuevo porque la clave privada
+  anterior se perdió; las licencias emitidas con la clave anterior no valen en 1.5.0.
 
 ## 1.4.0 (2026-11-07)
 

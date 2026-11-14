@@ -1,0 +1,27 @@
+ThermoWell Sizer - paquete completo
+===================================
+
+Contenido
+- ThermoWellSizer-<versión>-setup.exe : instalador del programa para Windows.
+- generador-licencias\GeneradorLicencias.exe : emisor de licencias (uso interno de
+  InstruMatik). keygen.py es el mismo programa en Python.
+- documentacion\ : manual de usuario, guía de licencias, cambios y licencia de uso.
+
+Instalar el programa
+1. Ejecute ThermoWellSizer-<versión>-setup.exe y siga los pasos.
+2. Sin licencia el programa funciona completo; los PDF llevan la marca de agua
+   «VERSIÓN DE EVALUACIÓN».
+3. Para activar una licencia: Ayuda > Licencia..., pegue el código (empieza con TWS1.)
+   y pulse «Instalar licencia».
+
+Emitir una licencia (necesita la clave privada, que NO viene en este paquete)
+Abra una consola (cmd) en la carpeta generador-licencias y ejecute:
+
+  GeneradorLicencias.exe emitir --clave C:\ruta\thermowell_sizer_private_key.pem ^
+      --titular "Empresa S.A." --correo compras@empresa.com --edicion professional
+
+Opcional: --vence AAAA-MM-DD (vencimiento) y --equipo HUELLA (la huella la copia el
+cliente desde Ayuda > Licencia). El comando imprime el código para enviar al cliente.
+
+La clave privada nunca se publica ni se envía a clientes: quien la tenga puede emitir
+licencias. Guárdela con copia de respaldo en un lugar seguro.
